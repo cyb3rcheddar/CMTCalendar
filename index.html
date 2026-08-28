@@ -5,6 +5,11 @@
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    /**
+     * DESIGN SYSTEM CMT MUSICAL
+     * Colori istituzionali: Verde foresta + Rosa pop
+     * Mobile-first responsive design
+     */
     :root {
       --primary-color: #2d6a4f;    /* Verde Foresta CMT */
       --primary-dark: #1b4332;     /* Verde Molto Scuro per titoli e gerarchie */
@@ -59,7 +64,7 @@
       letter-spacing: 1px;
     }
 
-    /* Card styling */
+    /* Card styling - contenitore principale per sezioni */
     .card {
       background: var(--card-bg);
       border-radius: 16px;
@@ -99,7 +104,7 @@
       border-color: var(--primary-color);
     }
 
-    /* Pulsanti */
+    /* Pulsanti standard */
     button {
       background: var(--primary-color);
       color: white;
@@ -121,7 +126,7 @@
       transform: scale(0.98);
     }
 
-    /* Pulsante rosa per azioni secondarie o di conferma */
+    /* Pulsante rosa per azioni di conferma */
     .btn-conferma {
       background: var(--accent-color);
       color: var(--primary-dark);
@@ -132,7 +137,7 @@
       color: white;
     }
 
-    /* Box Allievi / Famiglie */
+    /* Box Allievi / Famiglie - Liste membri */
     .membro-box {
       background: #f7faf8;
       border: 1px solid var(--border-color);
@@ -147,6 +152,7 @@
       font-size: 15px;
     }
 
+    /* Badge per codici corsi */
     .corso-badge {
       display: inline-block;
       background: var(--border-color);
@@ -158,14 +164,14 @@
       font-weight: bold;
     }
 
-    /* Badge per lo stato BOZZA */
+    /* Badge per lo stato BOZZA (visibile solo a staff) */
     .badge-bozza {
       background: #ffe3e8 !important;
       color: var(--accent-dark) !important;
       border: 1px solid var(--accent-color);
     }
 
-    /* Eventi del Calendario */
+    /* Card singolo evento calendario */
     .prova {
       border-left: 6px solid var(--primary-color);
       padding: 15px;
@@ -176,6 +182,7 @@
       position: relative;
     }
 
+    /* Lista di chi partecipa al turno */
     .partecipanti-list {
       margin-top: 10px;
       font-size: 13px;
@@ -195,7 +202,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    /* Materiali Didattici */
+    /* Card singolo materiale didattico */
     .materiale {
       background: #f4f9f4;
       padding: 15px;
@@ -219,6 +226,7 @@
       color: var(--primary-dark);
     }
 
+    /* Classe utility per nascondere elementi */
     .nascosto {
       display: none;
     }
@@ -243,7 +251,7 @@
     <div class="subtitle">Portale Allievi & Staff</div>
   </div>
 
-  <!-- BOX LOGIN -->
+  <!-- BOX LOGIN - Primo step (inizialmente visibile) -->
   <div id="loginBox" class="card">
     <h3>🔑 Accedi al Portale</h3>
     <input type="email" id="email" placeholder="Inserisci la tua email registrata">
@@ -251,14 +259,14 @@
     <div id="errore"></div>
   </div>
 
-  <!-- CONTENUTO DEL PORTALE (Inizialmente nascosto) -->
+  <!-- CONTENUTO DEL PORTALE - Visibile dopo login (inizialmente nascosto) -->
   <div id="contenuto" class="nascosto">
 
-    <!-- Profilo Genitore o Ruolo Staff -->
+    <!-- Sezione Profilo Utente e Allievi Famiglia -->
     <div class="card">
       <h3 id="utenteNome">👤 Benvenuto</h3>
       <div id="ruolo" style="font-weight: bold; color: var(--primary-color); margin-bottom: 12px; font-size: 15px;"></div>
-      <div id="allieviFamiglia"></div>
+      <div id="allieviFamiglia"></div>  <!-- Lista allievi per famiglie (vuota per staff) -->
     </div>
 
     <!-- Sezione Caricamento Materiale (Visibile SOLO a Docenti o Amministratore) -->
@@ -275,25 +283,33 @@
       <div id="caricaMessaggio" style="margin-top: 12px; font-size: 13px; font-weight: bold;"></div>
     </div>
 
-    <!-- Calendario e Prove -->
+    <!-- Calendario Prove e Turni -->
     <div class="card">
       <h3>📅 Calendario Prove</h3>
-      <div id="aggiornamenti"></div>
-      <div id="calendario"></div>
+      <div id="aggiornamenti"></div>  <!-- Alert aggiornamenti per famiglie -->
+      <div id="calendario"></div>     <!-- Lista turni -->
     </div>
 
-    <!-- Materiali Didattici -->
+    <!-- Materiali Didattici Disponibili -->
     <div class="card">
       <h3>📚 Materiali</h3>
-      <div id="materiali"></div>
+      <div id="materiali"></div>  <!-- Lista file condivisi -->
     </div>
 
   </div>
 
   <script>
-    let emailUtente = "";
-    let datiPortale = null;
+    // ============================================================
+    // STATO GLOBALE DEL PORTALE
+    // ============================================================
+    let emailUtente = "";  // Cache: email utente loggato
+    let datiPortale = null;  // Cache: oggetto state completo dal backend
 
+    /**
+     * AUTENTICAZIONE UTENTE - Entry point
+     * Invia email al backend (main.gs) via google.script.run.caricaPortale(email)
+     * Backend valida accesso e ritorna profilo completo
+     */
     function login() {
       emailUtente = document.getElementById("email").value.trim().toLowerCase();
 
@@ -302,57 +318,80 @@
         return;
       }
 
+      // Mostra feedback durante elaborazione
       document.getElementById("errore").innerHTML = "Verifica credenziali in corso...";
 
+      // Chiama backend (main.gs) in modo asincrono
       google.script.run
-        .withSuccessHandler(mostraPortale)
-        .withFailureHandler(function(e) {
+        .withSuccessHandler(mostraPortale)  // Callback: autenticazione riuscita
+        .withFailureHandler(function(e) {   // Callback: errore connessione
           document.getElementById("errore").innerHTML = "Errore di connessione: " + e.message;
         })
-        .caricaPortale(emailUtente);
+        .caricaPortale(emailUtente);  // Invia email per validazione
     }
 
+    /**
+     * RENDERING PORTALE - Mostra interfaccia in base al tipo utente
+     * Differenzia tra:
+     * - STAFF: mostra sezione caricamento materiale
+     * - FAMIGLIA: mostra lista allievi e loro corsi
+     * 
+     * @param {Object} dati - Risposta dal backend con profilo utente
+     */
     function mostraPortale(dati) {
       if (dati.errore) {
+        // Autenticazione fallita - mostra errore
         document.getElementById("errore").innerHTML = dati.messaggio;
         return;
       }
 
+      // Salva stato in cache globale
       datiPortale = dati;
 
-      // Nascondi login e mostra il portale principale
+      // Nascondi login box, mostra portale principale
       document.getElementById("loginBox").classList.add("nascosto");
       document.getElementById("contenuto").classList.remove("nascosto");
 
-      // Impostazioni Profilo e Ruoli
+      // Imposta intestazione profilo
       document.getElementById("utenteNome").innerHTML = "👤 " + dati.utente.nome;
       
       if (dati.utente.tipo === "staff") {
+        // PROFILO STAFF
         document.getElementById("ruolo").innerHTML = "Ruolo Staff: " + dati.utente.ruolo;
-        document.getElementById("allieviFamiglia").innerHTML = ""; 
+        document.getElementById("allieviFamiglia").innerHTML = "";  // Staff non ha allievi associati
         
-        // Se il membro dello staff ha i permessi di scrittura, sblocca l'upload
+        // Abilita sezione caricamento se staff ha permesso "puoCaricare"
+        // (Docenti e Admin possono caricare)
         if (dati.utente.puoCaricare) {
           document.getElementById("sezioneCaricamento").classList.remove("nascosto");
           popolaSelettoreCorsi(dati.corsiVisualizzati);
         }
       } else {
-        // Se l'utente naviga come famiglia (o se ha l'Anteprima Famiglia attiva)
+        // PROFILO FAMIGLIA
         if (dati.utente.anteprimaAttiva) {
+          // Docente in "Anteprima Famiglia" - visualizzazione read-only
           document.getElementById("ruolo").innerHTML = "Visualizzazione: Anteprima Famiglia (Sola Lettura)";
         } else {
           document.getElementById("ruolo").innerHTML = "Profilo: Famiglia";
         }
+        // Nasconde form caricamento per famiglie
         document.getElementById("sezioneCaricamento").classList.add("nascosto");
+        // Mostra lista allievi della famiglia
         mostraAllievi(dati.utente);
       }
 
-      // Popolamento dinamico delle aree informative
+      // Popola sezioni dinamiche
       mostraAggiornamenti(dati);
       mostraCalendario(dati.prove);
       mostraMateriali(dati.materiali);
     }
 
+    /**
+     * POPOLA SELECT CORSI - Dropdown per docenti/admin
+     * Permette di scegliere il corso per il caricamento materiale
+     * 
+     * @param {Array} corsi - Array di {id, nome} corsi assegnati
+     */
     function popolaSelettoreCorsi(corsi) {
       let select = document.getElementById("caricaCorso");
       select.innerHTML = "";
@@ -362,14 +401,20 @@
         return;
       }
 
+      // Crea option per ogni corso
       corsi.forEach(function(c) {
         let opt = document.createElement("option");
         opt.value = c.id;
-        opt.innerText = c.nome + " (" + c.id + ")";
+        opt.innerText = c.nome + " (" + c.id + ")";  // Nome descrittivo + ID
         select.appendChild(opt);
       });
     }
 
+    /**
+     * SALVA MATERIALE DIDATTICO - Upload file per docenti
+     * Valida form, invia al backend, ricarica lista materiali
+     * Callback: google.script.run.salvaNuovoMateriale()
+     */
     function salvaMateriale() {
       let corso = document.getElementById("caricaCorso").value;
       let titolo = document.getElementById("caricaTitolo").value.trim();
@@ -377,30 +422,35 @@
       let link = document.getElementById("caricaLink").value.trim();
       let msg = document.getElementById("caricaMessaggio");
 
+      // Validazione form
       if (!corso || !titolo || !link) {
         msg.style.color = "var(--accent-dark)";
         msg.innerHTML = "❌ Compila Corso, Titolo e inserisci un Link Drive.";
         return;
       }
 
+      // Feedback caricamento
       msg.style.color = "var(--primary-color)";
       msg.innerHTML = "Salvataggio nel database CMT in corso...";
 
+      // Invia al backend
       google.script.run
         .withSuccessHandler(function(risultato) {
           if (risultato.errore) {
+            // Errore salvataggio
             msg.style.color = "var(--accent-dark)";
             msg.innerHTML = "❌ " + risultato.messaggio;
           } else {
+            // Successo
             msg.style.color = "var(--primary-color)";
             msg.innerHTML = "✅ " + risultato.messaggio;
             
-            // Svuota i campi
+            // Pulisci form
             document.getElementById("caricaTitolo").value = "";
             document.getElementById("caricaDesc").value = "";
             document.getElementById("caricaLink").value = "";
             
-            // Ricarica la lista materiali
+            // Ricarica lista materiali dal backend
             google.script.run
               .withSuccessHandler(function(nuoviDati) {
                 mostraMateriali(nuoviDati.materiali);
@@ -411,6 +461,12 @@
         .salvaNuovoMateriale(corso, titolo, desc, link);
     }
 
+    /**
+     * MOSTRA ALLIEVI - Famiglia
+     * Renderizza lista di allievi del gruppo e i loro corsi
+     * 
+     * @param {Object} utente - Oggetto utente con proprietà .membri
+     */
     function mostraAllievi(utente) {
       let box = document.getElementById("allieviFamiglia");
       box.innerHTML = "";
@@ -418,11 +474,13 @@
       if (utente.membri && utente.membri.length > 0) {
         let html = "<p style='margin:0 0 10px 0; font-size:13px; color:var(--text-muted); font-weight: 500;'>Allievi iscritti:</p>";
         
+        // Itera su ogni allievato
         utente.membri.forEach(function(membro) {
           html += "<div class='membro-box'>";
           html += "<div class='membro-nome'>🎭 " + membro.nome + " " + membro.cognome + "</div>";
           html += "<div style='margin-top:5px;'>";
           
+          // Mostra badge corsi per questo allievato
           if(membro.corsi && membro.corsi.length > 0) {
             membro.corsi.forEach(function(c) {
               html += "<span class='corso-badge'>" + c + "</span>";
@@ -437,11 +495,19 @@
       }
     }
 
+    /**
+     * MOSTRA NOTIFICHE AGGIORNAMENTI
+     * Se dati.aggiornamenti=true, mostra alert rosso con pulsante "Ho letto e preso visione"
+     * Chiama confermaVisione() per segnare come letto
+     * 
+     * @param {Object} dati - State portale dal backend
+     */
     function mostraAggiornamenti(dati) {
       let box = document.getElementById("aggiornamenti");
       if (!box) return;
 
       if (dati.aggiornamenti) {
+        // Nuovo aggiornamento disponibile
         box.innerHTML = 
           "<div class='alert'>" +
           "🔔 <b>Nuovo aggiornamento disponibile!</b><br>" +
@@ -453,25 +519,47 @@
       }
     }
 
+    /**
+     * CONFERMA VISIONE AGGIORNAMENTO
+     * Marca nella traccia che l'utente ha visto la nuova versione
+     * Chiama google.script.run.confermaVisione(email)
+     * Ricarica pagina per aggiornare stato
+     */
     function confermaVisione() {
       google.script.run
         .withSuccessHandler(function() {
           alert("Grazie! Ricezione della nuova versione confermata.");
-          location.reload();
+          location.reload();  // Ricarica pagina
         })
         .confermaVisione(emailUtente);
     }
 
+    /**
+     * MOSTRA CALENDARIO - Renderizza lista turni
+     * Differenzia tra:
+     * - STAFF: vede tutti i turni (BOZZA ha badge rosso, PUBBLICATO normal)
+     * - FAMIGLIA: vede solo PUBBLICATO e mostra chi dei loro figli partecipa
+     * 
+     * Ogni turno ha:
+     * - Data, Orario, Attività descrittiva
+     * - Badge BOZZA se non pubblicato (solo staff)
+     * - Lista partecipanti (figli per famiglia, destinatari per staff)
+     * - Pulsante per salvare in Google Calendar
+     * 
+     * @param {Array} prove - Array di turni [{data, orario, cosa, destinatari, stato, note}]
+     */
     function mostraCalendario(prove) {
       let html = "";
       if (!prove || prove.length == 0) {
         html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessun turno o prova pianificata a calendario.</p>";
       } else {
         prove.forEach(function(p) {
-          let chiDeveAndare = [];
+          let chiDeveAndare = [];  // Figli della famiglia che partecipano
           
+          // Per famiglie: identifica quali figli partecipano al turno
           if (datiPortale.utente.tipo === "famiglia" && datiPortale.utente.membri) {
             datiPortale.utente.membri.forEach(function(membro) {
+              // Controlla se almeno uno dei corsi del figlio è nel turno
               let partecipa = membro.corsi.some(function(corsoCodice) {
                 return p.destinatari.includes(corsoCodice);
               });
@@ -482,16 +570,20 @@
             });
           }
 
+          // Identifica se turno è in BOZZA
           let èBozza = p.stato === "BOZZA";
 
+          // Renderizza card singolo turno
           html += 
             "<div class='prova' style='" + (èBozza ? "border-left-color: var(--accent-color);" : "") + "'>" +
             "<span style='font-size: 17px; font-weight: bold; color: " + (èBozza ? "var(--accent-dark)" : "var(--primary-dark)") + ";'>📅 " + p.data + "</span>";
 
+          // Badge BOZZA (visibile solo a staff)
           if (èBozza) {
             html += " <span class='corso-badge badge-bozza'>BOZZA INTERNA</span>";
           }
 
+          // Dettagli turno
           html += "<br><div style='margin-top:5px; font-size: 14px; line-height: 1.5;'>" +
                   "<b>🕒 Orario:</b> " + p.orario + "<br>" +
                   "<b>🎭 Attività:</b> " + p.cosa + "<br>";
@@ -502,18 +594,22 @@
           
           html += "</div>";
 
+          // Mostra chi partecipa
           if (chiDeveAndare.length > 0) {
+            // Famiglia: mostra i loro figli
             html += 
               "<div class='partecipanti-list'>" +
               "👉 <b>Chi partecipa:</b> " + chiDeveAndare.join(", ") +
               "</div>";
           } else if (datiPortale.utente.vedeTutto) {
+            // Staff con vedeTutto: mostra destinatari del turno
             html += 
               "<div class='partecipanti-list' style='background:#f4f9f4; border-color:var(--border-color);'>" +
               "👥 <b>Destinatari del turno:</b> " + p.destinatari.join(", ") +
               "</div>";
           }
 
+          // Pulsante Google Calendar
           html += 
             "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + p.cosa.replace(/'/g, "\\'") + "')\">" +
             "📅 Salva nel mio Google Calendar" +
@@ -524,6 +620,17 @@
       document.getElementById("calendario").innerHTML = html;
     }
 
+    /**
+     * MOSTRA MATERIALI - Renderizza lista file condivisi
+     * Filtra solo materiali pubblicati per i corsi dell'utente
+     * Ogni materiale ha:
+     * - Nome corso (badge)
+     * - Titolo del file
+     * - Descrizione (note docente)
+     * - Link Google Drive
+     * 
+     * @param {Array} lista - Array di materiali [{corso, titolo, descrizione, link}]
+     */
     function mostraMateriali(lista) {
       let html = "";
       if (!lista || lista.length == 0) {
@@ -542,15 +649,35 @@
       document.getElementById("materiali").innerHTML = html;
     }
 
+    /**
+     * APRI GOOGLE CALENDAR - Crea link per aggiungere evento
+     * Usa URL pubblico di Google Calendar con parametri
+     * - action=TEMPLATE: crea nuovo evento
+     * - text: titolo evento (URL encoded)
+     * - dates: intervallo orario in formato iCal
+     * 
+     * @param {string} data - Data in formato "GG/MM/AAAA"
+     * @param {string} orario - Orario in formato "HH:MM - HH:MM"
+     * @param {string} titolo - Nome evento
+     */
     function aggiungiCalendar(data, orario, titolo) {
       let testo = encodeURIComponent(titolo);
       let url = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
         "&text=" + testo +
         "&dates=" + creaDataGoogle(data, orario);
 
-      window.open(url, "_blank");
+      window.open(url, "_blank");  // Apri in nuova tab
     }
 
+    /**
+     * CONVERTE DATA E ORARIO - Formato per Google Calendar
+     * Converte da formato italiano "29/08/2026 14:30-15:30"
+     * A formato iCal "20260829T143000/20260829T153000"
+     * 
+     * @param {string} data - Data in formato "GG/MM/AAAA"
+     * @param {string} orario - Orario in formato "HH:MM - HH:MM"
+     * @returns {string} Intervallo iCal "INIZIO/FINE"
+     */
     function creaDataGoogle(data, orario) {
       try {
         let parti = data.split("/");
@@ -558,6 +685,7 @@
         let mese = parti[1];
         let anno = parti[2];
 
+        // Estrai ore/minuti da "HH:MM - HH:MM"
         let ora = orario.split("-")[0].trim();
         let fine = orario.split("-")[1].trim();
 
@@ -567,11 +695,13 @@
         let h2 = fine.split(":")[0];
         let m2 = fine.split(":")[1];
 
+        // Formato iCal: YYYYMMDDTHHMMSS
         let inizio = anno + mese + giorno + "T" + h1 + m1 + "00";
         let fineEvento = anno + mese + giorno + "T" + h2 + m2 + "00";
 
         return (inizio + "/" + fineEvento);
       } catch (e) {
+        // Se parsing fallisce, ritorna vuoto
         return "";
       }
     }
