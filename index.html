@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --primary-color: #2d6a4f;    /* Verde Foresta CMT */
+      --primary-dark: #1b4332;     /* Verde Molto Scuro per titoli e gerarchie */
+      --accent-color: #ff85a2;     /* Rosa Pop CMT per elementi di contrasto */
+      --accent-dark: #f72585;      /* Rosa più carico per focus e stati attivi */
+      --bg-color: #f4f9f4;         /* Sfondo chiarissimo con una punta di verde */
+      --card-bg: #ffffff;
+      --text-dark: #2d3748;
+      --text-muted: #718096;
+      --border-color: #d8f3dc;     /* Bordi verde chiarissimo */
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 15px;
+      background: var(--bg-color);
+      color: var(--text-dark);
+      margin: 0;
+    }
+
+    /* Intestazione con Logo */
+    .header-container {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-top: 10px;
+    }
+
+    .logo {
+      max-width: 120px;
+      height: auto;
+      border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(45, 106, 79, 0.2);
+      margin-bottom: 12px;
+      background-color: #fff;
+      padding: 5px;
+      border: 2px solid var(--accent-color);
+    }
+
+    h1 {
+      color: var(--primary-dark);
+      font-size: 24px;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Card styling */
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border-color);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: var(--primary-dark);
+      font-size: 17px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Input & Form */
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 1px solid #cbd5e0;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      background-color: #fff;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    /* Pulsanti */
+    button {
+      background: var(--primary-color);
+      color: white;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      width: 100%;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* Pulsante rosa per azioni secondarie o di conferma */
+    .btn-conferma {
+      background: var(--accent-color);
+      color: var(--primary-dark);
+    }
+
+    .btn-conferma:hover {
+      background: var(--accent-dark);
+      color: white;
+    }
+
+    /* Box Allievi / Famiglie */
+    .membro-box {
+      background: #f7faf8;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .membro-nome {
+      font-weight: bold;
+      color: var(--primary-dark);
+      font-size: 15px;
+    }
+
+    .corso-badge {
+      display: inline-block;
+      background: var(--border-color);
+      color: var(--primary-dark);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      margin: 4px 4px 0 0;
+      font-weight: bold;
+    }
+
+    /* Badge per lo stato BOZZA */
+    .badge-bozza {
+      background: #ffe3e8 !important;
+      color: var(--accent-dark) !important;
+      border: 1px solid var(--accent-color);
+    }
+
+    /* Eventi del Calendario */
+    .prova {
+      border-left: 6px solid var(--primary-color);
+      padding: 15px;
+      margin: 15px 0;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      border-radius: 0 12px 12px 0;
+      position: relative;
+    }
+
+    .partecipanti-list {
+      margin-top: 10px;
+      font-size: 13px;
+      background: #fff0f3; /* Sfumatura rosa leggera */
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px dashed var(--accent-color);
+    }
+
+    /* Notifica Alert per aggiornamenti calendario */
+    .alert {
+      background: #fff0f3;
+      padding: 15px;
+      border-radius: 12px;
+      border-left: 6px solid var(--accent-color);
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    /* Materiali Didattici */
+    .materiale {
+      background: #f4f9f4;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 12px;
+      border-left: 6px solid var(--primary-color);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+
+    .materiale a {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--primary-color);
+      font-weight: bold;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .materiale a:hover {
+      text-decoration: underline;
+      color: var(--primary-dark);
+    }
+
+    .nascosto {
+      display: none;
+    }
+
+    #errore {
+      color: var(--accent-dark);
+      margin-top: 12px;
+      font-size: 13px;
+      text-align: center;
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- INTESTAZIONE PORTALE CON LOGO -->
+  <div class="header-container">
+    <!-- Puoi inserire qui il link reale del logo dell'associazione -->
+    <img id="logo" class="logo" src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=150&h=150" alt="CMT Musical Logo" onerror="this.src='https://placehold.co/150x150/2d6a4f/ffffff?text=CMT'">
+    <h1>CMT Musical</h1>
+    <div class="subtitle">Portale Allievi & Staff</div>
+  </div>
+
+  <!-- BOX LOGIN -->
+  <div id="loginBox" class="card">
+    <h3>🔑 Accedi al Portale</h3>
+    <input type="email" id="email" placeholder="Inserisci la tua email registrata">
+    <button onclick="login()">Accedi</button>
+    <div id="errore"></div>
+  </div>
+
+  <!-- CONTENUTO DEL PORTALE (Inizialmente nascosto) -->
+  <div id="contenuto" class="nascosto">
+
+    <!-- Profilo Genitore o Ruolo Staff -->
+    <div class="card">
+      <h3 id="utenteNome">👤 Benvenuto</h3>
+      <div id="ruolo" style="font-weight: bold; color: var(--primary-color); margin-bottom: 12px; font-size: 15px;"></div>
+      <div id="allieviFamiglia"></div>
+    </div>
+
+    <!-- Sezione Caricamento Materiale (Visibile SOLO a Docenti o Amministratore) -->
+    <div id="sezioneCaricamento" class="card nascosto">
+      <h3>📤 Carica Materiale Didattico</h3>
+      <label style="font-size: 12px; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 5px;">Seleziona Corso:</label>
+      <select id="caricaCorso"></select>
+      
+      <input type="text" id="caricaTitolo" placeholder="Titolo del File (es. Base Musicale Atto I)">
+      <textarea id="caricaDesc" placeholder="Breve descrizione o note per gli allievi" rows="2"></textarea>
+      <input type="text" id="caricaLink" placeholder="Link di Condivisione Google Drive">
+      
+      <button onclick="salvaMateriale()">Invia e Condividi con Allievi</button>
+      <div id="caricaMessaggio" style="margin-top: 12px; font-size: 13px; font-weight: bold;"></div>
+    </div>
+
+    <!-- Calendario e Prove -->
+    <div class="card">
+      <h3>📅 Calendario Prove</h3>
+      <div id="aggiornamenti"></div>
+      <div id="calendario"></div>
+    </div>
+
+    <!-- Materiali Didattici -->
+    <div class="card">
+      <h3>📚 Materiali</h3>
+      <div id="materiali"></div>
+    </div>
+
+  </div>
+
+  <script>
+    let emailUtente = "";
+    let datiPortale = null;
+
+    function login() {
+      emailUtente = document.getElementById("email").value.trim().toLowerCase();
+
+      if (!emailUtente) {
+        document.getElementById("errore").innerHTML = "Inserisci una email valida";
+        return;
+      }
+
+      document.getElementById("errore").innerHTML = "Verifica credenziali in corso...";
+
+      google.script.run
+        .withSuccessHandler(mostraPortale)
+        .withFailureHandler(function(e) {
+          document.getElementById("errore").innerHTML = "Errore di connessione: " + e.message;
+        })
+        .caricaPortale(emailUtente);
+    }
+
+    function mostraPortale(dati) {
+      if (dati.errore) {
+        document.getElementById("errore").innerHTML = dati.messaggio;
+        return;
+      }
+
+      datiPortale = dati;
+
+      // Nascondi login e mostra il portale principale
+      document.getElementById("loginBox").classList.add("nascosto");
+      document.getElementById("contenuto").classList.remove("nascosto");
+
+      // Impostazioni Profilo e Ruoli
+      document.getElementById("utenteNome").innerHTML = "👤 " + dati.utente.nome;
+      
+      if (dati.utente.tipo === "staff") {
+        document.getElementById("ruolo").innerHTML = "Ruolo Staff: " + dati.utente.ruolo;
+        document.getElementById("allieviFamiglia").innerHTML = ""; 
+        
+        // Se il membro dello staff ha i permessi di scrittura, sblocca l'upload
+        if (dati.utente.puoCaricare) {
+          document.getElementById("sezioneCaricamento").classList.remove("nascosto");
+          popolaSelettoreCorsi(dati.corsiVisualizzati);
+        }
+      } else {
+        // Se l'utente naviga come famiglia (o se ha l'Anteprima Famiglia attiva)
+        if (dati.utente.anteprimaAttiva) {
+          document.getElementById("ruolo").innerHTML = "Visualizzazione: Anteprima Famiglia (Sola Lettura)";
+        } else {
+          document.getElementById("ruolo").innerHTML = "Profilo: Famiglia";
+        }
+        document.getElementById("sezioneCaricamento").classList.add("nascosto");
+        mostraAllievi(dati.utente);
+      }
+
+      // Popolamento dinamico delle aree informative
+      mostraAggiornamenti(dati);
+      mostraCalendario(dati.prove);
+      mostraMateriali(dati.materiali);
+    }
+
+    function popolaSelettoreCorsi(corsi) {
+      let select = document.getElementById("caricaCorso");
+      select.innerHTML = "";
+      
+      if (!corsi || corsi.length === 0) {
+        select.innerHTML = "<option value=''>Nessun corso attivo associato</option>";
+        return;
+      }
+
+      corsi.forEach(function(c) {
+        let opt = document.createElement("option");
+        opt.value = c.id;
+        opt.innerText = c.nome + " (" + c.id + ")";
+        select.appendChild(opt);
+      });
+    }
+
+    function salvaMateriale() {
+      let corso = document.getElementById("caricaCorso").value;
+      let titolo = document.getElementById("caricaTitolo").value.trim();
+      let desc = document.getElementById("caricaDesc").value.trim();
+      let link = document.getElementById("caricaLink").value.trim();
+      let msg = document.getElementById("caricaMessaggio");
+
+      if (!corso || !titolo || !link) {
+        msg.style.color = "var(--accent-dark)";
+        msg.innerHTML = "❌ Compila Corso, Titolo e inserisci un Link Drive.";
+        return;
+      }
+
+      msg.style.color = "var(--primary-color)";
+      msg.innerHTML = "Salvataggio nel database CMT in corso...";
+
+      google.script.run
+        .withSuccessHandler(function(risultato) {
+          if (risultato.errore) {
+            msg.style.color = "var(--accent-dark)";
+            msg.innerHTML = "❌ " + risultato.messaggio;
+          } else {
+            msg.style.color = "var(--primary-color)";
+            msg.innerHTML = "✅ " + risultato.messaggio;
+            
+            // Svuota i campi
+            document.getElementById("caricaTitolo").value = "";
+            document.getElementById("caricaDesc").value = "";
+            document.getElementById("caricaLink").value = "";
+            
+            // Ricarica la lista materiali
+            google.script.run
+              .withSuccessHandler(function(nuoviDati) {
+                mostraMateriali(nuoviDati.materiali);
+              })
+              .caricaPortale(emailUtente);
+          }
+        })
+        .salvaNuovoMateriale(corso, titolo, desc, link);
+    }
+
+    function mostraAllievi(utente) {
+      let box = document.getElementById("allieviFamiglia");
+      box.innerHTML = "";
+
+      if (utente.membri && utente.membri.length > 0) {
+        let html = "<p style='margin:0 0 10px 0; font-size:13px; color:var(--text-muted); font-weight: 500;'>Allievi iscritti:</p>";
+        
+        utente.membri.forEach(function(membro) {
+          html += "<div class='membro-box'>";
+          html += "<div class='membro-nome'>🎭 " + membro.nome + " " + membro.cognome + "</div>";
+          html += "<div style='margin-top:5px;'>";
+          
+          if(membro.corsi && membro.corsi.length > 0) {
+            membro.corsi.forEach(function(c) {
+              html += "<span class='corso-badge'>" + c + "</span>";
+            });
+          } else {
+            html += "<span style='font-size:11px; color:var(--text-muted);'>Nessun corso attivo assegnato</span>";
+          }
+          
+          html += "</div></div>";
+        });
+        box.innerHTML = html;
+      }
+    }
+
+    function mostraAggiornamenti(dati) {
+      let box = document.getElementById("aggiornamenti");
+      if (!box) return;
+
+      if (dati.aggiornamenti) {
+        box.innerHTML = 
+          "<div class='alert'>" +
+          "🔔 <b>Nuovo aggiornamento disponibile!</b><br>" +
+          "Calendario aggiornato alla versione: v" + dati.versione + "<br><br>" +
+          "<button class='btn-conferma' onclick='confermaVisione()'>✅ Ho letto e preso visione</button>" +
+          "</div>";
+      } else {
+        box.innerHTML = "";
+      }
+    }
+
+    function confermaVisione() {
+      google.script.run
+        .withSuccessHandler(function() {
+          alert("Grazie! Ricezione della nuova versione confermata.");
+          location.reload();
+        })
+        .confermaVisione(emailUtente);
+    }
+
+    function mostraCalendario(prove) {
+      let html = "";
+      if (!prove || prove.length == 0) {
+        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessun turno o prova pianificata a calendario.</p>";
+      } else {
+        prove.forEach(function(p) {
+          let chiDeveAndare = [];
+          
+          if (datiPortale.utente.tipo === "famiglia" && datiPortale.utente.membri) {
+            datiPortale.utente.membri.forEach(function(membro) {
+              let partecipa = membro.corsi.some(function(corsoCodice) {
+                return p.destinatari.includes(corsoCodice);
+              });
+              
+              if (partecipa) {
+                chiDeveAndare.push(membro.nome);
+              }
+            });
+          }
+
+          let èBozza = p.stato === "BOZZA";
+
+          html += 
+            "<div class='prova' style='" + (èBozza ? "border-left-color: var(--accent-color);" : "") + "'>" +
+            "<span style='font-size: 17px; font-weight: bold; color: " + (èBozza ? "var(--accent-dark)" : "var(--primary-dark)") + ";'>📅 " + p.data + "</span>";
+
+          if (èBozza) {
+            html += " <span class='corso-badge badge-bozza'>BOZZA INTERNA</span>";
+          }
+
+          html += "<br><div style='margin-top:5px; font-size: 14px; line-height: 1.5;'>" +
+                  "<b>🕒 Orario:</b> " + p.orario + "<br>" +
+                  "<b>🎭 Attività:</b> " + p.cosa + "<br>";
+
+          if (p.note) {
+            html += "<b>📝 Note:</b> <span style='color:var(--primary-color); font-weight: 500;'>" + p.note + "</span><br>";
+          }
+          
+          html += "</div>";
+
+          if (chiDeveAndare.length > 0) {
+            html += 
+              "<div class='partecipanti-list'>" +
+              "👉 <b>Chi partecipa:</b> " + chiDeveAndare.join(", ") +
+              "</div>";
+          } else if (datiPortale.utente.vedeTutto) {
+            html += 
+              "<div class='partecipanti-list' style='background:#f4f9f4; border-color:var(--border-color);'>" +
+              "👥 <b>Destinatari del turno:</b> " + p.destinatari.join(", ") +
+              "</div>";
+          }
+
+          html += 
+            "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + p.cosa.replace(/'/g, "\\'") + "')\">" +
+            "📅 Salva nel mio Google Calendar" +
+            "</button>" +
+            "</div>";
+        });
+      }
+      document.getElementById("calendario").innerHTML = html;
+    }
+
+    function mostraMateriali(lista) {
+      let html = "";
+      if (!lista || lista.length == 0) {
+        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessun materiale didattico ancora disponibile per i tuoi corsi.</p>";
+      } else {
+        lista.forEach(function(m) {
+          html += 
+            "<div class='materiale'>" +
+            "<span class='corso-badge' style='background:var(--border-color); color:var(--primary-dark); margin-bottom: 5px;'>" + m.corso + "</span><br>" +
+            "<b>📂 " + m.titolo + "</b><br>" +
+            "<span style='font-size:12px; color:var(--text-muted);'>" + m.descrizione + "</span><br>" +
+            "<a href='" + m.link + "' target='_blank'>🔗 Apri file condiviso</a>" +
+            "</div>";
+        });
+      }
+      document.getElementById("materiali").innerHTML = html;
+    }
+
+    function aggiungiCalendar(data, orario, titolo) {
+      let testo = encodeURIComponent(titolo);
+      let url = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+        "&text=" + testo +
+        "&dates=" + creaDataGoogle(data, orario);
+
+      window.open(url, "_blank");
+    }
+
+    function creaDataGoogle(data, orario) {
+      try {
+        let parti = data.split("/");
+        let giorno = parti[0];
+        let mese = parti[1];
+        let anno = parti[2];
+
+        let ora = orario.split("-")[0].trim();
+        let fine = orario.split("-")[1].trim();
+
+        let h1 = ora.split(":")[0];
+        let m1 = ora.split(":")[1];
+
+        let h2 = fine.split(":")[0];
+        let m2 = fine.split(":")[1];
+
+        let inizio = anno + mese + giorno + "T" + h1 + m1 + "00";
+        let fineEvento = anno + mese + giorno + "T" + h2 + m2 + "00";
+
+        return (inizio + "/" + fineEvento);
+      } catch (e) {
+        return "";
+      }
+    }
+  </script>
+</body>
+
+</html>
