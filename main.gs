@@ -37,6 +37,9 @@ function apriPortale(){
  FUNZIONI UTILITY DI BASE - Accesso dati generico
 ****************************************************/
 
+const cacheDati = {};
+let cacheNomiCorsi = null;
+
 /**
  * Recupera un foglio per nome
  * @param {string} nome - Nome del foglio (es. "CALENDARIO", "ACCESSI")
@@ -55,16 +58,23 @@ function getFoglio(nome){
  * @returns {Array<Array>} Matrice 2D [righe][colonne]. Riga 0 è l'header
  */
 function getDati(nome){
+  if(Object.prototype.hasOwnProperty.call(cacheDati, nome)){
+    return cacheDati[nome];
+  }
+
   const sh =
   getFoglio(nome);
 
   if(!sh){
+    cacheDati[nome] = [];
     return [];
   }
 
-  return sh
+  cacheDati[nome] = sh
   .getDataRange()
   .getValues();
+
+  return cacheDati[nome];
 }
 
 /**
@@ -439,25 +449,56 @@ function creaPersona(riga, h){
  * @returns {string} Nome completo del corso
  */
 function nomeCorso(id){
+  const idCercato = String(id).trim().toUpperCase();
+  const mappa = getMappaNomiCorsi();
+  return Object.prototype.hasOwnProperty.call(mappa, idCercato)
+    ? mappa[idCercato]
+    : id;
+}
+
+function getMappaNomiCorsi(){
+  if(cacheNomiCorsi !== null) return cacheNomiCorsi;
+
+  cacheNomiCorsi = {};
   const dati = getDati("CORSI");
-  if(dati.length < 2) return id;  // Foglio vuoto, ritorna ID
+  if(dati.length < 2) return cacheNomiCorsi;
 
   const h = dati[0];
   const cID = trovaColonna(h, "ID CORSI");
-  const cNome = trovaColonna(h, "NOME CORSO");
+  const cNomeDrive = trovaColonna(h, "nome corso e cartella drive");
+  const cNome = cNomeDrive !== -1 ? cNomeDrive : trovaColonna(h, "NOME CORSO");
+  if(cID === -1 || cNome === -1) return cacheNomiCorsi;
 
-  // Colonne non trovate, fallback a ID
-  if (cID === -1 || cNome === -1) return id;
-
-  const idCercato = String(id).trim().toUpperCase();
-
-  // Ricerca lineare nel foglio CORSI
   for(let i = 1; i < dati.length; i++){
-    if(String(dati[i][cID]).trim().toUpperCase() === idCercato){
-      return dati[i][cNome];  // Trova e ritorna il nome
-    }
+    const idCorso = String(dati[i][cID]).trim().toUpperCase();
+    if(idCorso) cacheNomiCorsi[idCorso] = dati[i][cNome];
   }
-  return id;  // Non trovato, fallback a ID
+  return cacheNomiCorsi;
+}
+
+function normalizzaCorso(valore){
+  return String(valore || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "")
+    .trim();
+}
+
+/**
+ * Verifica se un destinatario identifica uno dei corsi dell'utente.
+ * Accetta sia l'ID tecnico sia il nome del corso nella scheda CORSI.
+ */
+function destinatarioCorrisponde(destinatario, corsi){
+  const valore = normalizzaCorso(destinatario);
+  if(!valore) return false;
+
+  return corsi.some(function(corso){
+    const id = normalizzaCorso(corso);
+    const nome = normalizzaCorso(nomeCorso(corso));
+    return valore === id || valore === nome ||
+      (nome.length > 3 && (valore.includes(nome) || nome.includes(valore)));
+  });
 }
 
 /**
@@ -519,9 +560,12 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
 
   // Itera su tutti i turni
   for(let i=1;i<dati.length;i++){
-    let stato = cStato === -1
+    let statoLetto = cStato === -1
       ? "PUBBLICATO"
-      : String(dati[i][cStato]).trim().toUpperCase() || "PUBBLICATO";
+      : String(dati[i][cStato]).trim().toUpperCase();
+    let stato = (!statoLetto || valoreSI(statoLetto) || statoLetto === "PUBBLICATO")
+      ? "PUBBLICATO"
+      : statoLetto;
 
     // FILTRO ACCESSO: Famiglie vedono solo PUBBLICATO, staff vede tutto
     // Questo è un controllo di sicurezza critico
@@ -539,11 +583,10 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
       // Se vedeTutto=true (admin staff), mostra comunque il turno
       trovato = true;
     } else {
-      // Verifica se almeno uno dei corsi dell'utente è nei destinatari
-      corsi.forEach(function(c){
-        if(destinatari.includes(c)){
-          trovato = true;
-        }
+      // Verifica se almeno uno dei corsi dell'utente è nei destinatari.
+      // La colonna può contenere l'ID oppure il nome del corso.
+      trovato = destinatari.some(function(destinatario){
+        return destinatarioCorrisponde(destinatario, corsi);
       });
     }
 
@@ -692,60 +735,6 @@ function pubblicaAggiornamenti(){
   .alert("📢 Aggiornamento pubblicato\nVersione " + versione);
 }
 
-/****************************************************
- MATERIALI DIDATTICI - Gestione file Drive
- Docenti/Admin possono caricare, famiglie visualizzano
-****************************************************/
-
-/**
- * Recupera i materiali didattici pubblicati per i corsi dell'utente
- * Filtra: solo corsi assegnati all'utente + Pubblicato="SI"
- * 
- * Colonne attese in MATERIALI:
- * - ID CORSI (quale corso)
- * - Titolo (nome del file)
- * - Descrizione (opzionale, note)
- * - Link Drive (URL Google Drive condiviso)
- * - Pubblicato ("SI" per visibilità)
- * - Data (opzionale, quando caricato)
- * 
- * @param {Array<string>} corsi - Corsi assegnati all'utente
- * @returns {Array<Object>} Materiali [{corso, titolo, descrizione, link}]
- */
-function getMateriali(corsi){
-  const dati = getDati("MATERIALI");
-  if(dati.length < 2) return [];  // Nessun materiale
-
-  const h = dati[0];
-  const cID = trovaColonna(h, "ID CORSI");
-  const cTitolo = trovaColonna(h, "Titolo");
-  const cDesc = trovaColonna(h, "Descrizione");
-  const cLink = trovaColonna(h, "Link Drive");
-  const cPubblicato = trovaColonna(h, "Pubblicato");
-
-  // Colonne obbligatorie mancanti
-  if (cID === -1 || cTitolo === -1 || cLink === -1) return [];
-
-  let risultato = [];
-  
-  // Itera su tutti i materiali
-  for(let i=1; i<dati.length; i++){
-    let idCorsoRiga = String(dati[i][cID]).trim();
-    let isPubblicato = valoreSI(dati[i][cPubblicato]);  // Deve essere "SI"
-
-    // Filtra: corso assegnato all'utente E pubblicato
-    if(corsi.includes(idCorsoRiga) && isPubblicato){
-      risultato.push({
-        corso: nomeCorso(idCorsoRiga),  // Nome leggibile corso
-        titolo: dati[i][cTitolo],
-        descrizione: cDesc !== -1 ? dati[i][cDesc] : "",  // Opzionale
-        link: dati[i][cLink]  // Link Drive
-      });
-    }
-  }
-  return risultato;
-}
-
 /**
  * Salva un nuovo materiale didattico nel foglio MATERIALI
  * Chiamato dai docenti/admin tramite form upload nel portale
@@ -833,14 +822,13 @@ function getUltimaPubblicazione(){
  * Ritorna un oggetto "state" che contiene:
  * - Autenticazione e profilo utente
  * - Calendario filtrato per i corsi dell'utente
- * - Materiali disponibili
  * - Stato notifiche aggiornamenti
  * - Timestamp ultima pubblicazione
  * 
  * @param {string} email - Email dell'utente che accede
  * @returns {Object} 
  *   - Errore: {errore: true, messaggio: "..."}
- *   - Successo: {utente, corsiVisualizzati, prove, materiali, versione, versioneVista, aggiornamenti, ultimaPubblicazione}
+ *   - Successo: {utente, corsiVisualizzati, prove, versione, versioneVista, aggiornamenti, ultimaPubblicazione}
  */
 function caricaPortale(email){
   // STEP 1: Autenticazione - determina tipo utente (staff vs famiglia)
@@ -857,7 +845,6 @@ function caricaPortale(email){
     utente: utente,  // Profilo utente con permessi
     corsiVisualizzati: creaCorsiVisualizzati(corsi),  // Nomi leggibili corsi
     prove: calendario,  // Turni filtrati
-    materiali: getMateriali(corsi),  // Materiali didattici
     versione: getVersione(),  // Versione attuale calendar
     versioneVista: getVersioneVista(email),  // Versione che ha visto l'utente
     aggiornamenti: utente.tipo !== "staff" ? controlloAggiornamenti(email) : false,  // Alert per famiglie e individuali

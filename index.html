@@ -202,30 +202,6 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    /* Card singolo materiale didattico */
-    .materiale {
-      background: #f4f9f4;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 12px;
-      border-left: 6px solid var(--primary-color);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    }
-
-    .materiale a {
-      display: inline-block;
-      margin-top: 8px;
-      color: var(--primary-color);
-      font-weight: bold;
-      text-decoration: none;
-      font-size: 13px;
-    }
-
-    .materiale a:hover {
-      text-decoration: underline;
-      color: var(--primary-dark);
-    }
-
     /* Classe utility per nascondere elementi */
     .nascosto {
       display: none;
@@ -381,7 +357,6 @@
       // Popola sezioni dinamiche
       mostraAggiornamenti(dati);
       mostraCalendario(dati.prove);
-      mostraMateriali(dati.materiali);
     }
 
     /**
@@ -448,12 +423,6 @@
             document.getElementById("caricaDesc").value = "";
             document.getElementById("caricaLink").value = "";
             
-            // Ricarica lista materiali dal backend
-            google.script.run
-              .withSuccessHandler(function(nuoviDati) {
-                mostraMateriali(nuoviDati.materiali);
-              })
-              .caricaPortale(emailUtente);
           }
         })
         .salvaNuovoMateriale(corso, titolo, desc, link);
@@ -636,35 +605,6 @@
         });
       }
       document.getElementById("calendario").innerHTML = html;
-    }
-
-    /**
-     * MOSTRA MATERIALI - Renderizza lista file condivisi
-     * Filtra solo materiali pubblicati per i corsi dell'utente
-     * Ogni materiale ha:
-     * - Nome corso (badge)
-     * - Titolo del file
-     * - Descrizione (note docente)
-     * - Link Google Drive
-     * 
-     * @param {Array} lista - Array di materiali [{corso, titolo, descrizione, link}]
-     */
-    function mostraMateriali(lista) {
-      let html = "";
-      if (!lista || lista.length == 0) {
-        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessun materiale didattico ancora disponibile per i tuoi corsi.</p>";
-      } else {
-        lista.forEach(function(m) {
-          html += 
-            "<div class='materiale'>" +
-            "<span class='corso-badge' style='background:var(--border-color); color:var(--primary-dark); margin-bottom: 5px;'>" + m.corso + "</span><br>" +
-            "<b>📂 " + m.titolo + "</b><br>" +
-            "<span style='font-size:12px; color:var(--text-muted);'>" + m.descrizione + "</span><br>" +
-            "<a href='" + m.link + "' target='_blank'>🔗 Apri file condiviso</a>" +
-            "</div>";
-        });
-      }
-      document.getElementById("materiali").innerHTML = html;
     }
 
     /**
