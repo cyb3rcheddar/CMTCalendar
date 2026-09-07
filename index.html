@@ -290,12 +290,6 @@
       <div id="calendario"></div>     <!-- Lista turni -->
     </div>
 
-    <!-- Materiali Didattici Disponibili -->
-    <div class="card">
-      <h3>📚 Materiali</h3>
-      <div id="materiali"></div>  <!-- Lista file condivisi -->
-    </div>
-
   </div>
 
   <script>
@@ -523,13 +517,31 @@
      * CONFERMA VISIONE AGGIORNAMENTO
      * Marca nella traccia che l'utente ha visto la nuova versione
      * Chiama google.script.run.confermaVisione(email)
-     * Ricarica pagina per aggiornare stato
+     * Aggiorna l'avviso senza ricaricare la sidebar
      */
     function confermaVisione() {
+      let box = document.getElementById("aggiornamenti");
+      let pulsante = box ? box.querySelector("button") : null;
+
+      if (pulsante) {
+        pulsante.disabled = true;
+        pulsante.innerText = "Registrazione in corso...";
+      }
+
       google.script.run
         .withSuccessHandler(function() {
-          alert("Grazie! Ricezione della nuova versione confermata.");
-          location.reload();  // Ricarica pagina
+          if (box) {
+            box.innerHTML = "<div class='alert'>✅ Presa visione registrata correttamente.</div>";
+          }
+        })
+        .withFailureHandler(function(e) {
+          if (pulsante) {
+            pulsante.disabled = false;
+            pulsante.innerText = "✅ Ho letto e preso visione";
+          }
+          if (box) {
+            box.insertAdjacentHTML("beforeend", "<p id='errorePresaVisione' style='color:var(--accent-dark); font-size:13px;'>Errore nella registrazione: " + e.message + "</p>");
+          }
         })
         .confermaVisione(emailUtente);
     }
