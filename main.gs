@@ -484,7 +484,7 @@ function creaCorsiVisualizzati(corsi){
 ****************************************************/
 
 /**
- * Recupera i turni/prove del calendario filtrando per:
+ * Recupera le prove del calendario filtrando per:
  * 1. Tipo utente (staff vs famiglia)
  * 2. Stato turno (BOZZA vs PUBBLICATO)
  * 3. Corsi assegnati all'utente
@@ -496,18 +496,21 @@ function creaCorsiVisualizzati(corsi){
  * @param {Array<string>} corsi - Corsi assegnati all'utente
  * @param {boolean} vedeTutto - Se true, ignora filtri corsi (staff admin)
  * @param {string} tipoUtente - "staff" o "famiglia"
- * @returns {Array<Object>} Turni filtrati [{data, orario, cosa, destinatari, stato, note, versione}]
+ * Le prime quattro colonne del foglio sono: Data, Orario, Prova, Destinatari.
+ * Le colonne Stato, Note Pubbliche e Versione sono opzionali.
+ * @returns {Array<Object>} Prove filtrate [{data, orario, cosa, destinatari, stato, note, versione}]
  */
 function getCalendario(corsi, vedeTutto, tipoUtente){
   const dati = getDati("CALENDARIO");
   if(dati.length < 2) return [];  // Nessun calendario
 
   const h = dati[0];
-  // Mappa colonne calendario
-  const cData = trovaColonna(h, "Data");
-  const cOra = trovaColonna(h, "Orario");
-  const cCosa = trovaColonna(h, "Cosa si fa");
-  const cDest = trovaColonna(h, "Destinatari");
+  // A-D sono il formato minimo per ogni prova; i nomi delle intestazioni
+  // vengono preferiti, con fallback alle prime quattro colonne.
+  const cData = trovaColonna(h, "Data") !== -1 ? trovaColonna(h, "Data") : 0;
+  const cOra = trovaColonna(h, "Orario") !== -1 ? trovaColonna(h, "Orario") : 1;
+  const cCosa = trovaColonna(h, "Cosa si fa") !== -1 ? trovaColonna(h, "Cosa si fa") : 2;
+  const cDest = trovaColonna(h, "Destinatari") !== -1 ? trovaColonna(h, "Destinatari") : 3;
   const cStato = trovaColonna(h, "Stato");
   const cNote = trovaColonna(h, "Note Pubbliche");
   const cVersione = trovaColonna(h, "Versione");
@@ -516,7 +519,9 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
 
   // Itera su tutti i turni
   for(let i=1;i<dati.length;i++){
-    let stato = String(dati[i][cStato]).trim().toUpperCase();
+    let stato = cStato === -1
+      ? "PUBBLICATO"
+      : String(dati[i][cStato]).trim().toUpperCase() || "PUBBLICATO";
 
     // FILTRO ACCESSO: Famiglie vedono solo PUBBLICATO, staff vede tutto
     // Questo è un controllo di sicurezza critico
@@ -525,10 +530,7 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
     }
 
     // Estrai i corsi destinatari del turno
-    let destinatari = String(dati[i][cDest])
-    .split(",")
-    .map(x=>x.trim())
-    .filter(x=>x!="");
+    let destinatari = listaID(dati[i][cDest]);
 
     // Verifica se l'utente è interessato a questo turno
     let trovato = false;
@@ -554,8 +556,8 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
       cosa: dati[i][cCosa],
       destinatari: destinatari,
       stato: stato,  // BOZZA o PUBBLICATO
-      note: dati[i][cNote],
-      versione: Number(dati[i][cVersione] || 1)
+      note: cNote === -1 ? "" : dati[i][cNote],
+      versione: cVersione === -1 ? 1 : Number(dati[i][cVersione] || 1)
     });
   }
   return risultati;

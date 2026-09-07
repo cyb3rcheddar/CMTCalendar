@@ -286,9 +286,11 @@
     <!-- Calendario Prove e Turni -->
     <div class="card">
       <h3>📅 Calendario Prove</h3>
-      <div id="aggiornamenti"></div>  <!-- Alert aggiornamenti per famiglie -->
       <div id="calendario"></div>     <!-- Lista turni -->
     </div>
+
+    <!-- Box presa visione: visibile solo con una nuova versione o dopo la conferma nella sessione -->
+    <div id="aggiornamenti" class="card nascosto"></div>
 
   </div>
 
@@ -504,6 +506,7 @@
 
       if (dati.aggiornamenti) {
         // Nuovo aggiornamento disponibile
+        box.classList.remove("nascosto");
         box.innerHTML = 
           "<div class='alert'>" +
           "🔔 <b>Nuovo aggiornamento disponibile!</b><br>" +
@@ -512,6 +515,7 @@
           "</div>";
       } else {
         box.innerHTML = "";
+        box.classList.add("nascosto");
       }
     }
 
@@ -549,7 +553,7 @@
     }
 
     /**
-     * MOSTRA CALENDARIO - Renderizza lista turni
+    * MOSTRA CALENDARIO - Renderizza lista prove e turni
      * Differenzia tra:
      * - STAFF: vede tutti i turni (BOZZA ha badge rosso, PUBBLICATO normal)
      * - FAMIGLIA: vede solo PUBBLICATO e mostra chi dei loro figli partecipa
@@ -625,7 +629,7 @@
 
           // Pulsante Google Calendar
           html += 
-            "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + p.cosa.replace(/'/g, "\\'") + "')\">" +
+            "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + String(p.cosa).replace(/'/g, "\\'") + "')\">" +
             "📅 Salva nel mio Google Calendar" +
             "</button>" +
             "</div>";
