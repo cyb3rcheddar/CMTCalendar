@@ -361,10 +361,12 @@
           popolaSelettoreCorsi(dati.corsiVisualizzati);
         }
       } else {
-        // PROFILO FAMIGLIA
+        // PROFILO FAMIGLIA O INDIVIDUALE
         if (dati.utente.anteprimaAttiva) {
           // Docente in "Anteprima Famiglia" - visualizzazione read-only
           document.getElementById("ruolo").innerHTML = "Visualizzazione: Anteprima Famiglia (Sola Lettura)";
+        } else if (dati.utente.tipo === "individuale") {
+          document.getElementById("ruolo").innerHTML = "Profilo: Individuale";
         } else {
           document.getElementById("ruolo").innerHTML = "Profilo: Famiglia";
         }

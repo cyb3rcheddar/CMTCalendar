@@ -156,7 +156,7 @@ function nuovaVersione(){
 /**
  * FUNZIONE PRINCIPALE DI AUTENTICAZIONE
  * Determina il tipo di utente e carica i dati appropriati
- * Flusso: Staff (ACCESSI) → Famiglia (GRUPPI+UTENTI) → Errore
+ * Flusso: Staff (ACCESSI) → Gruppo/Individuale (GRUPPI+UTENTI) → Errore
  * 
  * @param {string} email - Email dell'utente che accede
  * @returns {Object} 
@@ -276,8 +276,8 @@ function cercaAccesso(email){
 }
 
 /****************************************************
- ACCESSI FAMIGLIE - Fogli "GRUPPI" + "UTENTI"
- Schema: Una famiglia (email) → ID GRUPPO → Più allievi
+ ACCESSI FAMIGLIE E INDIVIDUALI - Fogli "GRUPPI" + "UTENTI"
+ Schema: Un account (email) → ID GRUPPO opzionale → Uno o più utenti
 ****************************************************/
 
 /**
@@ -285,7 +285,8 @@ function cercaAccesso(email){
  * 
  * Processo in 2 step:
  * 1. Trova ID GRUPPO dalla email nel foglio GRUPPI
- * 2. Legge tutti gli allievi associati al gruppo da UTENTI
+ * 2. Se l'ID è vuoto, legge l'utente individuale senza gruppo
+ * 3. Altrimenti legge tutti gli allievi associati al gruppo da UTENTI
  * 
  * Colonne attese in GRUPPI:
  * - Email d'accesso
@@ -300,7 +301,7 @@ function cercaAccesso(email){
  * - Colonne da ID GRUPPO+1 in poi: codici corsi (marcati con "X")
  * 
  * @param {string} email - Email del genitore
- * @returns {Object|null} Profilo famiglia con lista allievi, null se non trovata
+ * @returns {Object|null} Profilo famiglia/individuale, null se non trovata
  */
 function cercaGruppoEUtenti(email){
   const datiGruppi = getDati("GRUPPI");
@@ -328,10 +329,7 @@ function cercaGruppoEUtenti(email){
     }
   }
 
-  // Se email non trovata o group non valido, non è una famiglia registrata
-  if(!idGruppoTrovato) return null;
-
-  // STEP 2: Leggi tutti gli allievi associati a questo gruppo
+  // STEP 2: Leggi l'utente individuale o gli allievi associati al gruppo
   const datiUtenti = getDati("UTENTI");
   if(datiUtenti.length < 2) return null;  // Foglio UTENTI vuoto
 
@@ -339,16 +337,25 @@ function cercaGruppoEUtenti(email){
   // Mappa colonne UTENTI
   const cUIdGruppo = trovaColonna(hUtenti, "ID GRUPPO");
   const cUAttivo = trovaColonna(hUtenti, "Attivo");
+  const cUEmail = ["Email", "Email d'accesso", "Email utente"]
+    .map(function(nome) { return trovaColonna(hUtenti, nome); })
+    .find(function(indice) { return indice !== -1; });
 
   let persone = [];  // Array di allievi della famiglia
+  let accountIndividuale = !idGruppoTrovato;
 
-  // Raccogli tutti gli allievi attivi del gruppo
+  // Raccogli l'utente individuale o tutti gli allievi attivi del gruppo
   for(let i=1; i<datiUtenti.length; i++){
-    if(
-      String(datiUtenti[i][cUIdGruppo]).trim() == idGruppoTrovato
-      && valoreSI(datiUtenti[i][cUAttivo])  // Allievato deve essere attivo
-    ){
+    let attivo = valoreSI(datiUtenti[i][cUAttivo]);
+    let idRiga = cUIdGruppo === -1 ? "" : String(datiUtenti[i][cUIdGruppo]).trim();
+    let emailRiga = cUEmail === undefined ? "" : String(datiUtenti[i][cUEmail]).trim().toLowerCase();
+    let corrisponde = idGruppoTrovato
+      ? idRiga == idGruppoTrovato
+      : (cUEmail !== undefined ? emailRiga == email : idRiga == "");
+
+    if(attivo && corrisponde){
       persone.push(creaPersona(datiUtenti[i], hUtenti));
+      if(accountIndividuale && cUEmail === undefined) break;
     }
   }
 
@@ -368,10 +375,12 @@ function cercaGruppoEUtenti(email){
   });
   tuttiCorsiID = [...new Set(tuttiCorsiID)];  // Rimuovi duplicati
 
-  // Profilo famiglia con lista completa di allievi
+  // Profilo individuale o famiglia con lista completa di allievi
   return {
-    tipo: "famiglia",
-    nome: nicknameFamiglia ? nicknameFamiglia : "Gruppo " + idGruppoTrovato,
+    tipo: accountIndividuale ? "individuale" : "famiglia",
+    nome: accountIndividuale
+      ? persone[0].nome + " " + persone[0].cognome
+      : (nicknameFamiglia ? nicknameFamiglia : "Gruppo " + idGruppoTrovato),
     idGruppo: idGruppoTrovato,
     corsi: tuttiCorsiID,  // Elenco unico di corsi per la famiglia
     corsiVisualizzati: creaCorsiVisualizzati(tuttiCorsiID),
@@ -511,7 +520,7 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
 
     // FILTRO ACCESSO: Famiglie vedono solo PUBBLICATO, staff vede tutto
     // Questo è un controllo di sicurezza critico
-    if(tipoUtente === "famiglia" && stato !== "PUBBLICATO"){
+    if(tipoUtente !== "staff" && stato !== "PUBBLICATO"){
       continue;  // Nasconde BOZZE dalle famiglie
     }
 
@@ -849,7 +858,7 @@ function caricaPortale(email){
     materiali: getMateriali(corsi),  // Materiali didattici
     versione: getVersione(),  // Versione attuale calendar
     versioneVista: getVersioneVista(email),  // Versione che ha visto l'utente
-    aggiornamenti: utente.tipo === "famiglia" ? controlloAggiornamenti(email) : false,  // Alert per famiglie
+    aggiornamenti: utente.tipo !== "staff" ? controlloAggiornamenti(email) : false,  // Alert per famiglie e individuali
     ultimaPubblicazione: getUltimaPubblicazione()  // Timestamp info
   };
 }
