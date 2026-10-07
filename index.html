@@ -3,7 +3,7 @@
 
 <head>
   <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <style>
     /**
      * DESIGN SYSTEM CMT MUSICAL
@@ -22,12 +22,20 @@
       --border-color: #d8f3dc;     /* Bordi verde chiarissimo */
     }
 
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 15px;
+      max-width: 960px;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
       background: var(--bg-color);
       color: var(--text-dark);
-      margin: 0;
+      margin: 0 auto;
     }
 
     /* Intestazione con Logo */
@@ -90,7 +98,6 @@
     input, textarea, select {
       width: 100%;
       padding: 12px;
-      box-sizing: border-box;
       border: 1px solid #cbd5e0;
       border-radius: 10px;
       margin-bottom: 12px;
@@ -99,9 +106,10 @@
       transition: border-color 0.2s;
     }
 
-    input:focus, textarea:focus, select:focus {
+    input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
       outline: none;
       border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.2);
     }
 
     /* Pulsanti standard */
@@ -114,12 +122,10 @@
       cursor: pointer;
       font-weight: bold;
       font-size: 14px;
+      line-height: 1.35;
+      min-height: 48px;
       width: 100%;
       transition: background 0.2s, transform 0.1s;
-    }
-
-    button:hover {
-      background: var(--primary-dark);
     }
 
     button:active {
@@ -130,11 +136,6 @@
     .btn-conferma {
       background: var(--accent-color);
       color: var(--primary-dark);
-    }
-
-    .btn-conferma:hover {
-      background: var(--accent-dark);
-      color: white;
     }
 
     /* Box Allievi / Famiglie - Liste membri */
@@ -213,6 +214,108 @@
       font-size: 13px;
       text-align: center;
       font-weight: 500;
+    }
+
+    .prova,
+    .partecipanti-list,
+    .membro-box,
+    #ruolo {
+      overflow-wrap: anywhere;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      button:hover {
+        background: var(--primary-dark);
+      }
+
+      .btn-conferma:hover {
+        background: var(--accent-dark);
+        color: white;
+      }
+    }
+
+    @media (max-width: 768px) {
+      html,
+      body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      body {
+        margin: 0;
+        min-width: 0;
+        padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+          max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      }
+
+      .card,
+      .card * {
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+      }
+
+      .header-container {
+        margin-bottom: 18px;
+        padding-top: 4px;
+      }
+
+      .logo {
+        max-width: 96px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      .card {
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 14px;
+      }
+
+      .card h3 {
+        font-size: 16px;
+      }
+
+      input,
+      textarea,
+      select {
+        font-size: 16px;
+      }
+
+      .prova {
+        padding: 12px;
+        margin: 12px 0;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .card {
+        padding: 13px;
+      }
+
+      .prova {
+        padding: 10px;
+      }
+
+      .corso-badge {
+        padding: 4px 8px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      button:active {
+        transform: none;
+      }
     }
   </style>
 </head>
