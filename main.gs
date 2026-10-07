@@ -2,6 +2,16 @@
  🎭 CMT MUSICAL - PORTALE COMPLETO (SISTEMA UNIFICATO)
  ****************************************************/
 
+
+/**
+ * Servizio Web App: rende il portale accessibile via URL del browser
+ */
+function doGet(e) {
+  return HtmlService
+    .createHtmlOutputFromFile("index")
+    .setTitle("🎭 Portale CMT Musical")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
 /**
  * Crea il menu personalizzato nella barra del foglio Google Sheets
  * Viene eseguita automaticamente all'apertura del foglio
