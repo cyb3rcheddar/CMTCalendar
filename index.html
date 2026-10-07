@@ -173,14 +173,34 @@
     }
 
     /* Card singolo evento calendario */
+    .giorno-calendario {
+      margin: 18px 0 24px;
+    }
+
+    .giorno-intestazione {
+      margin: 0;
+      padding: 10px 12px;
+      color: var(--primary-dark);
+      background: var(--border-color);
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
     .prova {
       border-left: 6px solid var(--primary-color);
       padding: 15px;
-      margin: 15px 0;
+      margin: 10px 0;
       background: #fff;
       box-shadow: 0 2px 6px rgba(0,0,0,0.03);
       border-radius: 0 12px 12px 0;
       position: relative;
+    }
+
+    .prova-orario {
+      margin-bottom: 5px;
+      color: var(--primary-dark);
+      font-size: 15px;
+      font-weight: bold;
     }
 
     /* Lista di chi partecipa al turno */
@@ -643,68 +663,107 @@
       if (!prove || prove.length == 0) {
         html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessun turno o prova pianificata a calendario.</p>";
       } else {
-        prove.forEach(function(p) {
-          let chiDeveAndare = [];  // Figli della famiglia che partecipano
-          
-          // Per famiglie: identifica quali figli partecipano al turno
-          if (datiPortale.utente.tipo === "famiglia" && datiPortale.utente.membri) {
-            datiPortale.utente.membri.forEach(function(membro) {
-              // Controlla se almeno uno dei corsi del figlio è nel turno
-              let partecipa = membro.corsi.some(function(corsoCodice) {
-                return p.destinatari.includes(corsoCodice);
+        let gruppiPerGiorno = new Map();
+        prove.forEach(function(prova) {
+          let giorno = String(prova.data || "").trim();
+          if (!gruppiPerGiorno.has(giorno)) {
+            gruppiPerGiorno.set(giorno, []);
+          }
+          gruppiPerGiorno.get(giorno).push(prova);
+        });
+
+        let gruppiOrdinati = Array.from(gruppiPerGiorno.entries());
+        gruppiOrdinati.sort(function(gruppoA, gruppoB) {
+          let partiA = gruppoA[0].match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          let partiB = gruppoB[0].match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+          if (partiA && partiB) {
+            let chiaveA = partiA[3] + partiA[2].padStart(2, "0") + partiA[1].padStart(2, "0");
+            let chiaveB = partiB[3] + partiB[2].padStart(2, "0") + partiB[1].padStart(2, "0");
+            return chiaveA.localeCompare(chiaveB);
+          }
+
+          return gruppoA[0].localeCompare(gruppoB[0]);
+        });
+
+        gruppiOrdinati.forEach(function(gruppo) {
+          let giorno = gruppo[0];
+          let eventi = gruppo[1];
+          eventi.sort(function(eventoA, eventoB) {
+            let oraA = String(eventoA.orario || "").match(/(\d{1,2}):(\d{2})/);
+            let oraB = String(eventoB.orario || "").match(/(\d{1,2}):(\d{2})/);
+            let minutiA = oraA ? Number(oraA[1]) * 60 + Number(oraA[2]) : Infinity;
+            let minutiB = oraB ? Number(oraB[1]) * 60 + Number(oraB[2]) : Infinity;
+            return minutiA - minutiB;
+          });
+
+          html += "<section class='giorno-calendario'>" +
+            "<h4 class='giorno-intestazione'>📅 " + giorno + "</h4>";
+
+          eventi.forEach(function(p) {
+            let chiDeveAndare = [];  // Figli della famiglia che partecipano
+
+            // Per famiglie: identifica quali figli partecipano al turno
+            if (datiPortale.utente.tipo === "famiglia" && datiPortale.utente.membri) {
+              datiPortale.utente.membri.forEach(function(membro) {
+                // Controlla se almeno uno dei corsi del figlio è nel turno
+                let partecipa = membro.corsi.some(function(corsoCodice) {
+                  return p.destinatari.includes(corsoCodice);
+                });
+
+                if (partecipa) {
+                  chiDeveAndare.push(membro.nome);
+                }
               });
-              
-              if (partecipa) {
-                chiDeveAndare.push(membro.nome);
-              }
-            });
-          }
+            }
 
-          // Identifica se turno è in BOZZA
-          let èBozza = p.stato === "BOZZA";
+            // Identifica se turno è in BOZZA
+            let èBozza = p.stato === "BOZZA";
 
-          // Renderizza card singolo turno
-          html += 
-            "<div class='prova' style='" + (èBozza ? "border-left-color: var(--accent-color);" : "") + "'>" +
-            "<span style='font-size: 17px; font-weight: bold; color: " + (èBozza ? "var(--accent-dark)" : "var(--primary-dark)") + ";'>📅 " + p.data + "</span>";
+            // Renderizza una card separata per ogni turno
+            html +=
+              "<div class='prova' style='" + (èBozza ? "border-left-color: var(--accent-color);" : "") + "'>" +
+              "<div class='prova-orario'>🕒 " + p.orario + "</div>";
 
-          // Badge BOZZA (visibile solo a staff)
-          if (èBozza) {
-            html += " <span class='corso-badge badge-bozza'>BOZZA INTERNA</span>";
-          }
+            // Badge BOZZA (visibile solo a staff)
+            if (èBozza) {
+              html += " <span class='corso-badge badge-bozza'>BOZZA INTERNA</span>";
+            }
 
-          // Dettagli turno
-          html += "<br><div style='margin-top:5px; font-size: 14px; line-height: 1.5;'>" +
-                  "<b>🕒 Orario:</b> " + p.orario + "<br>" +
-                  "<b>🎭 Attività:</b> " + p.cosa + "<br>";
+            // Dettagli turno
+            html += "<div style='margin-top:5px; font-size: 14px; line-height: 1.5;'>" +
+                    "<b>🎭 Attività:</b> " + p.cosa + "<br>";
 
-          if (p.note) {
-            html += "<b>📝 Note:</b> <span style='color:var(--primary-color); font-weight: 500;'>" + p.note + "</span><br>";
-          }
-          
-          html += "</div>";
+            if (p.note) {
+              html += "<b>📝 Note:</b> <span style='color:var(--primary-color); font-weight: 500;'>" + p.note + "</span><br>";
+            }
 
-          // Mostra chi partecipa
-          if (chiDeveAndare.length > 0) {
-            // Famiglia: mostra i loro figli
+            html += "</div>";
+
+            // Mostra chi partecipa
+            if (chiDeveAndare.length > 0) {
+              // Famiglia: mostra i loro figli
+              html +=
+                "<div class='partecipanti-list'>" +
+                "👉 <b>Chi partecipa:</b> " + chiDeveAndare.join(", ") +
+                "</div>";
+            } else if (datiPortale.utente.vedeTutto) {
+              // Staff con vedeTutto: mostra destinatari del turno
+              html +=
+                "<div class='partecipanti-list' style='background:#f4f9f4; border-color:var(--border-color);'>" +
+                "👥 <b>Destinatari del turno:</b> " + p.destinatari.join(", ") +
+                "</div>";
+            }
+
+            // Il pulsante usa data, orario e attività del singolo evento.
             html += 
-              "<div class='partecipanti-list'>" +
-              "👉 <b>Chi partecipa:</b> " + chiDeveAndare.join(", ") +
+              "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + String(p.cosa).replace(/'/g, "\\'") + "')\">" +
+              "📅 Salva nel mio Google Calendar" +
+              "</button>" +
               "</div>";
-          } else if (datiPortale.utente.vedeTutto) {
-            // Staff con vedeTutto: mostra destinatari del turno
-            html += 
-              "<div class='partecipanti-list' style='background:#f4f9f4; border-color:var(--border-color);'>" +
-              "👥 <b>Destinatari del turno:</b> " + p.destinatari.join(", ") +
-              "</div>";
-          }
+          });
 
-          // Pulsante Google Calendar
-          html += 
-            "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + String(p.cosa).replace(/'/g, "\\'") + "')\">" +
-            "📅 Salva nel mio Google Calendar" +
-            "</button>" +
-            "</div>";
+          html += "</section>";
         });
       }
       document.getElementById("calendario").innerHTML = html;
