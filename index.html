@@ -651,13 +651,28 @@
      * - FAMIGLIA: vede solo PUBBLICATO e mostra chi dei loro figli partecipa
      * 
      * Ogni turno ha:
-     * - Data, Orario, Attività descrittiva
+     * - Giorno della settimana, data, orario e attività descrittiva
      * - Badge BOZZA se non pubblicato (solo staff)
      * - Lista partecipanti (figli per famiglia, destinatari per staff)
      * - Pulsante per salvare in Google Calendar
      * 
      * @param {Array} prove - Array di turni [{data, orario, cosa, destinatari, stato, note}]
      */
+    function formattaIntestazioneGiorno(giorno) {
+      let parti = giorno.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!parti) return giorno;
+
+      let data = new Date(Number(parti[3]), Number(parti[2]) - 1, Number(parti[1]));
+      if (data.getFullYear() !== Number(parti[3]) ||
+          data.getMonth() !== Number(parti[2]) - 1 ||
+          data.getDate() !== Number(parti[1])) {
+        return giorno;
+      }
+
+      let nomeGiorno = data.toLocaleDateString("it-IT", { weekday: "long" });
+      return nomeGiorno.charAt(0).toLocaleUpperCase("it-IT") + nomeGiorno.slice(1) + ", " + giorno;
+    }
+
     function mostraCalendario(prove) {
       let html = "";
       if (!prove || prove.length == 0) {
@@ -698,7 +713,7 @@
           });
 
           html += "<section class='giorno-calendario'>" +
-            "<h4 class='giorno-intestazione'>📅 " + giorno + "</h4>";
+            "<h4 class='giorno-intestazione'>📅 " + formattaIntestazioneGiorno(giorno) + "</h4>";
 
           eventi.forEach(function(p) {
             let chiDeveAndare = [];  // Figli della famiglia che partecipano
