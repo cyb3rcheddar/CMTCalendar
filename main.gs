@@ -549,7 +549,7 @@ function creaCorsiVisualizzati(corsi){
  * @param {string} tipoUtente - "staff" o "famiglia"
  * Le prime quattro colonne del foglio sono: Data, Orario, Prova, Destinatari.
  * Le colonne Stato, Note Pubbliche e Versione sono opzionali.
- * @returns {Array<Object>} Prove filtrate [{data, orario, cosa, destinatari, stato, note, versione}]
+ * @returns {Array<Object>} Prove filtrate [{data, orario, cosa, colore, destinatari, stato, note, versione}]
  */
 function getCalendario(corsi, vedeTutto, tipoUtente){
   const dati = getDati("CALENDARIO");
@@ -565,6 +565,10 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
   const cStato = trovaColonna(h, "Stato");
   const cNote = trovaColonna(h, "Note Pubbliche");
   const cVersione = trovaColonna(h, "Versione");
+  const foglio = getFoglio("CALENDARIO");
+  const coloriAttivita = foglio
+    .getRange(2, cCosa + 1, dati.length - 1, 1)
+    .getBackgrounds();
 
   let risultati = [];
 
@@ -603,10 +607,12 @@ function getCalendario(corsi, vedeTutto, tipoUtente){
     if(!trovato) continue;  // Non rilevante per questo utente
 
     // Turno include, aggiungi ai risultati
+    let coloreAttivita = String(coloriAttivita[i - 1][0] || "").toLowerCase();
     risultati.push({
       data: formattaData(dati[i][cData]),
       orario: dati[i][cOra],
       cosa: dati[i][cCosa],
+      colore: coloreAttivita === "#ffffff" ? "" : coloreAttivita,
       destinatari: destinatari,
       stato: stato,  // BOZZA o PUBBLICATO
       note: cNote === -1 ? "" : dati[i][cNote],

@@ -673,6 +673,14 @@
       return nomeGiorno.charAt(0).toLocaleUpperCase("it-IT") + nomeGiorno.slice(1) + ", " + giorno;
     }
 
+    function coloreTestoPulsante(coloreSfondo) {
+      let rosso = parseInt(coloreSfondo.slice(1, 3), 16);
+      let verde = parseInt(coloreSfondo.slice(3, 5), 16);
+      let blu = parseInt(coloreSfondo.slice(5, 7), 16);
+      let luminosita = (299 * rosso + 587 * verde + 114 * blu) / 1000;
+      return luminosita >= 150 ? "var(--primary-dark)" : "#ffffff";
+    }
+
     function mostraCalendario(prove) {
       let html = "";
       if (!prove || prove.length == 0) {
@@ -734,10 +742,20 @@
 
             // Identifica se turno è in BOZZA
             let èBozza = p.stato === "BOZZA";
+            let coloreBarra = /^#[0-9a-f]{6}$/i.test(String(p.colore || ""))
+              ? p.colore
+              : "";
+            let stileBarra = coloreBarra
+              ? "border-left-color: " + coloreBarra + ";"
+              : (èBozza ? "border-left-color: var(--accent-color);" : "");
+            let stilePulsanteCalendar = "margin-top:12px; font-size:11px; padding:8px;";
+            if (coloreBarra) {
+              stilePulsanteCalendar += " background-color:" + coloreBarra + "; color:" + coloreTestoPulsante(coloreBarra) + ";";
+            }
 
             // Renderizza una card separata per ogni turno
             html +=
-              "<div class='prova' style='" + (èBozza ? "border-left-color: var(--accent-color);" : "") + "'>" +
+              "<div class='prova' style='" + stileBarra + "'>" +
               "<div class='prova-orario'>🕒 " + p.orario + "</div>";
 
             // Badge BOZZA (visibile solo a staff)
@@ -772,7 +790,7 @@
 
             // Il pulsante usa data, orario e attività del singolo evento.
             html += 
-              "<button style='margin-top:12px; font-size:11px; padding:8px;' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + String(p.cosa).replace(/'/g, "\\'") + "')\">" +
+              "<button style='" + stilePulsanteCalendar + "' onclick=\"aggiungiCalendar('" + p.data + "','" + p.orario + "','" + String(p.cosa).replace(/'/g, "\\'") + "')\">" +
               "📅 Salva nel mio Google Calendar" +
               "</button>" +
               "</div>";
