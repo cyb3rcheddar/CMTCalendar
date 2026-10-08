@@ -382,14 +382,14 @@
       <div id="caricaMessaggio" style="margin-top: 12px; font-size: 13px; font-weight: bold;"></div>
     </div>
 
+    <!-- Box presa visione: visibile solo con una nuova versione o dopo la conferma nella sessione -->
+    <div id="aggiornamenti" class="card nascosto"></div>
+
     <!-- Calendario Prove e Turni -->
     <div class="card">
       <h3>📅 Calendario Prove</h3>
       <div id="calendario"></div>     <!-- Lista turni -->
     </div>
-
-    <!-- Box presa visione: visibile solo con una nuova versione o dopo la conferma nella sessione -->
-    <div id="aggiornamenti" class="card nascosto"></div>
 
   </div>
 
@@ -399,6 +399,7 @@
     // ============================================================
     let emailUtente = "";  // Cache: email utente loggato
     let datiPortale = null;  // Cache: oggetto state completo dal backend
+    let timerAggiornamentoCalendario = null;
 
     /**
      * AUTENTICAZIONE UTENTE - Entry point
@@ -480,6 +481,7 @@
       // Popola sezioni dinamiche
       mostraAggiornamenti(dati);
       mostraCalendario(dati.prove);
+      pianificaAggiornamentoCalendarioGiornaliero();
     }
 
     /**
@@ -681,13 +683,58 @@
       return luminosita >= 150 ? "var(--primary-dark)" : "#ffffff";
     }
 
+    function chiaveDataCalendario(data) {
+      let parti = String(data || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!parti) return null;
+
+      let giorno = Number(parti[1]);
+      let mese = Number(parti[2]);
+      let anno = Number(parti[3]);
+      let dataVerificata = new Date(anno, mese - 1, giorno);
+      if (dataVerificata.getFullYear() !== anno ||
+          dataVerificata.getMonth() !== mese - 1 ||
+          dataVerificata.getDate() !== giorno) {
+        return null;
+      }
+
+      return anno * 10000 + mese * 100 + giorno;
+    }
+
+    function pianificaAggiornamentoCalendarioGiornaliero() {
+      if (timerAggiornamentoCalendario !== null) {
+        clearTimeout(timerAggiornamentoCalendario);
+      }
+
+      let adesso = new Date();
+      let prossimaMezzanotte = new Date(
+        adesso.getFullYear(),
+        adesso.getMonth(),
+        adesso.getDate() + 1
+      );
+      let attesa = prossimaMezzanotte.getTime() - adesso.getTime() + 100;
+
+      timerAggiornamentoCalendario = setTimeout(function() {
+        if (datiPortale) {
+          mostraCalendario(datiPortale.prove);
+        }
+        pianificaAggiornamentoCalendarioGiornaliero();
+      }, attesa);
+    }
+
     function mostraCalendario(prove) {
       let html = "";
-      if (!prove || prove.length == 0) {
-        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessun turno o prova pianificata a calendario.</p>";
+      let oggi = new Date();
+      let chiaveOggi = oggi.getFullYear() * 10000 + (oggi.getMonth() + 1) * 100 + oggi.getDate();
+      let proveFuture = (prove || []).filter(function(prova) {
+        let chiaveData = chiaveDataCalendario(prova.data);
+        return chiaveData !== null && chiaveData > chiaveOggi;
+      });
+
+      if (proveFuture.length === 0) {
+        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessuna attività futura pianificata a calendario.</p>";
       } else {
         let gruppiPerGiorno = new Map();
-        prove.forEach(function(prova) {
+        proveFuture.forEach(function(prova) {
           let giorno = String(prova.data || "").trim();
           if (!gruppiPerGiorno.has(giorno)) {
             gruppiPerGiorno.set(giorno, []);
