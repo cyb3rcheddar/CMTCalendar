@@ -85,7 +85,7 @@
     .card h3 {
       margin-top: 0;
       color: var(--primary-dark);
-      font-size: 17px;
+      font-size: 18px;
       border-bottom: 2px solid var(--border-color);
       padding-bottom: 10px;
       margin-bottom: 15px;
@@ -254,19 +254,41 @@
       }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 768px), (hover: none) and (pointer: coarse) {
       html,
       body {
         width: 100%;
         max-width: 100%;
         overflow-x: hidden;
+        overscroll-behavior-x: none;
       }
 
       body {
         margin: 0;
         min-width: 0;
+        font-size: 18px;
+        line-height: 1.5;
+        touch-action: pan-y pinch-zoom;
         padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
           max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      }
+
+      .header-container {
+        margin-bottom: 20px;
+        padding-top: 6px;
+      }
+
+      .logo {
+        width: 108px;
+        max-width: 100%;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      .subtitle {
+        font-size: 16px;
       }
 
       .card,
@@ -276,52 +298,114 @@
         overflow-wrap: anywhere;
       }
 
-      .header-container {
-        margin-bottom: 18px;
-        padding-top: 4px;
-      }
-
-      .logo {
-        max-width: 96px;
-      }
-
-      h1 {
-        font-size: 22px;
-      }
-
       .card {
-        padding: 16px;
-        margin-bottom: 16px;
-        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 18px;
       }
 
       .card h3 {
-        font-size: 16px;
+        font-size: 20px;
       }
 
       input,
       textarea,
       select {
-        font-size: 16px;
+        min-height: 54px;
+        padding: 14px;
+        font-size: 17px;
+      }
+
+      textarea {
+        min-height: 90px;
+      }
+
+      button {
+        min-height: 56px;
+        padding: 14px 18px;
+        font-size: 17px;
+      }
+
+      .membro-box {
+        padding: 15px;
+      }
+
+      .membro-nome,
+      #ruolo {
+        font-size: 18px;
+      }
+
+      .corso-badge {
+        padding: 7px 12px;
+        font-size: 15px;
+      }
+
+      .giorno-calendario {
+        margin: 20px 0 26px;
+      }
+
+      .giorno-intestazione {
+        padding: 13px;
+        font-size: 18px;
       }
 
       .prova {
-        padding: 12px;
-        margin: 12px 0;
+        padding: 16px;
+        margin: 14px 0;
+      }
+
+      .prova-orario {
+        font-size: 18px;
+      }
+
+      .prova > div:not(.prova-orario) {
+        font-size: 17px !important;
+      }
+
+      .partecipanti-list,
+      .alert {
+        padding: 15px;
+        font-size: 17px;
+      }
+
+      .prova button {
+        font-size: 17px !important;
+      }
+
+      #errore,
+      #caricaMessaggio,
+      #allieviFamiglia > p,
+      #sezioneCaricamento label {
+        font-size: 16px !important;
       }
     }
 
     @media (max-width: 360px) {
       .card {
-        padding: 13px;
+        padding: 15px;
       }
 
       .prova {
-        padding: 10px;
+        padding: 13px;
       }
 
       .corso-badge {
-        padding: 4px 8px;
+        padding: 5px 9px;
+      }
+    }
+
+    @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+      .header-container {
+        margin-bottom: 14px;
+        padding-top: 0;
+      }
+
+      .logo {
+        width: 88px;
+        margin-bottom: 8px;
+      }
+
+      h1 {
+        font-size: 26px;
       }
     }
 
