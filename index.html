@@ -968,7 +968,10 @@
             " / " + rigaFine + "'>";
             html += "<div class='orari-corso-materia'>" +
               escapeHTML(corso.materia || corso.id || "Corso") + "</div>";
-            html += "<div>" + escapeHTML(corso.eta || "—") + "</div>";
+            let materiaNormalizzata = String(corso.materia || "").trim().toLocaleLowerCase("it-IT");
+            if(materiaNormalizzata !== "compagnia"){
+              html += "<div>" + escapeHTML(corso.eta || "—") + "</div>";
+            }
             html += "<div>" + escapeHTML(corso.inizio + " - " + corso.fine) + "</div>";
             if(corso.docente && String(corso.docente).trim()){
               html += "<div>Docente: " + escapeHTML(corso.docente) + "</div>";
