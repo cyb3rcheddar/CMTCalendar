@@ -165,6 +165,12 @@
       font-weight: bold;
     }
 
+    .corso-orario {
+      padding-left: 5px;
+      font-size: 10px;
+      font-weight: normal;
+    }
+
     /* Badge per lo stato BOZZA (visibile solo a staff) */
     .badge-bozza {
       background: #ffe3e8 !important;
@@ -657,9 +663,21 @@
           html += "<div style='margin-top:5px;'>";
           
           // Mostra badge corsi per questo allievato
-          if(membro.corsi && membro.corsi.length > 0) {
-            membro.corsi.forEach(function(c) {
-              html += "<span class='corso-badge'>" + c + "</span>";
+          if(membro.corsiVisualizzati && membro.corsiVisualizzati.length > 0) {
+            membro.corsiVisualizzati.forEach(function(c) {
+              html += "<span class='corso-badge'>" + c.id;
+              if(c.orario) {
+                let testoOrario = String(c.orario).trim();
+                testoOrario = testoOrario
+                  .replace(/(^|[^a-z])(luned[iì]|marted[iì]|mercoled[iì]|gioved[iì]|venerd[iì]|sabato|domenica)(?=$|[^a-z])/i, "$1")
+                  .replace(/^\s*orari?o?\s*:\s*/i, "")
+                  .replace(/^[\s,;:–—-]+|[\s,;:–—-]+$/g, "")
+                  .trim();
+                if(testoOrario) {
+                  html += "<span class='corso-orario'>· " + testoOrario + "</span>";
+                }
+              }
+              html += "</span>";
             });
           } else {
             html += "<span style='font-size:11px; color:var(--text-muted);'>Nessun corso attivo assegnato</span>";

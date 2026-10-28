@@ -49,6 +49,7 @@ function apriPortale(){
 
 const cacheDati = {};
 let cacheNomiCorsi = null;
+let cacheOrariCorsi = null;
 
 /**
  * Recupera un foglio per nome
@@ -85,6 +86,17 @@ function getDati(nome){
   .getValues();
 
   return cacheDati[nome];
+}
+
+function getDatiCorsi(){
+  const foglioCorsi = SpreadsheetApp
+    .getActive()
+    .getSheets()
+    .find(function(foglio){
+      return String(foglio.getName()).trim().toUpperCase() === "CORSI";
+    });
+
+  return foglioCorsi ? getDati(foglioCorsi.getName()) : [];
 }
 
 /**
@@ -442,6 +454,7 @@ function creaPersona(riga, h){
     }
   }
 
+  persona.corsiVisualizzati = creaCorsiVisualizzati(persona.corsi);
   return persona;
 }
 
@@ -470,7 +483,7 @@ function getMappaNomiCorsi(){
   if(cacheNomiCorsi !== null) return cacheNomiCorsi;
 
   cacheNomiCorsi = {};
-  const dati = getDati("CORSI");
+  const dati = getDatiCorsi();
   if(dati.length < 2) return cacheNomiCorsi;
 
   const h = dati[0];
@@ -484,6 +497,59 @@ function getMappaNomiCorsi(){
     if(idCorso) cacheNomiCorsi[idCorso] = dati[i][cNome];
   }
   return cacheNomiCorsi;
+}
+
+function getMappaOrariCorsi(){
+  if(cacheOrariCorsi !== null) return cacheOrariCorsi;
+
+  cacheOrariCorsi = {};
+  const dati = getDatiCorsi();
+  if(dati.length < 2) return cacheOrariCorsi;
+
+  const h = dati[0];
+  const normalizzaIntestazione = function(valore){
+    return String(valore || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "");
+  };
+  const cIDCorso = h.findIndex(function(intestazione){
+    const nome = normalizzaIntestazione(intestazione);
+    return nome.indexOf("IDCORS") !== -1 || nome.indexOf("CODICECORS") !== -1;
+  });
+  const cID = cIDCorso !== -1 ? cIDCorso : h.findIndex(function(intestazione){
+    return normalizzaIntestazione(intestazione) === "ID";
+  });
+  const cNomeDrive = trovaColonna(h, "nome corso e cartella drive");
+  const cNomeEsatto = cNomeDrive !== -1 ? cNomeDrive : trovaColonna(h, "NOME CORSO");
+  const cNome = cNomeEsatto !== -1 ? cNomeEsatto : h.findIndex(function(intestazione){
+    return normalizzaIntestazione(intestazione).indexOf("NOMECORS") !== -1;
+  });
+  const cOrariHeader = h.findIndex(function(intestazione){
+    const nome = normalizzaIntestazione(intestazione);
+    return nome === "ORARI" || nome === "ORARIO" ||
+      nome.indexOf("ORARI") !== -1 || nome.indexOf("ORARIO") !== -1;
+  });
+  const cOrari = cOrariHeader !== -1 ? cOrariHeader : 8;
+  if(cOrari >= h.length || (cID === -1 && cNome === -1)) return cacheOrariCorsi;
+
+  for(let i = 1; i < dati.length; i++){
+    const valore = dati[i][cOrari];
+    if(valore === "" || valore === null || valore === undefined) continue;
+
+    const orario = valore instanceof Date && !isNaN(valore.getTime())
+      ? Utilities.formatDate(valore, Session.getScriptTimeZone(), "HH:mm")
+      : String(valore).trim();
+    if(!orario) continue;
+
+    [cID, cNome].forEach(function(colonna){
+      if(colonna === -1) return;
+      const aliasCorso = normalizzaCorso(dati[i][colonna]);
+      if(aliasCorso) cacheOrariCorsi[aliasCorso] = orario;
+    });
+  }
+  return cacheOrariCorsi;
 }
 
 function normalizzaCorso(valore){
@@ -512,7 +578,7 @@ function destinatarioCorrisponde(destinatario, corsi){
 }
 
 /**
- * Converte array di ID corsi in array di oggetti {id, nome}
+ * Converte array di ID corsi in array di oggetti {id, nome, orario}
  * Usato per popolare UI con nomi leggibili
  * 
  * @param {Array<string>} corsi - Array di ID corsi
@@ -520,10 +586,28 @@ function destinatarioCorrisponde(destinatario, corsi){
  */
 function creaCorsiVisualizzati(corsi){
   let risultato = [];
+  const mappaOrari = getMappaOrariCorsi();
   corsi.forEach(function(id){
+    const chiaveID = normalizzaCorso(id);
+    const chiaveNome = normalizzaCorso(nomeCorso(id));
+    let orario = mappaOrari[chiaveID] || mappaOrari[chiaveNome] || "";
+
+    if(!orario && (chiaveID.length >= 4 || chiaveNome.length >= 4)){
+      const orariCompatibili = Object.keys(mappaOrari).reduce(function(orari, alias){
+        if(alias.length >= 4 &&
+          ((chiaveID.length >= 4 && (alias.includes(chiaveID) || chiaveID.includes(alias))) ||
+           (chiaveNome.length >= 4 && (alias.includes(chiaveNome) || chiaveNome.includes(alias))))){
+          if(orari.indexOf(mappaOrari[alias]) === -1) orari.push(mappaOrari[alias]);
+        }
+        return orari;
+      }, []);
+      if(orariCompatibili.length === 1) orario = orariCompatibili[0];
+    }
+
     risultato.push({
       id: id,
-      nome: nomeCorso(id)  // Lookup del nome completo
+      nome: nomeCorso(id),  // Lookup del nome completo
+      orario: orario
     });
   });
   return risultato;
