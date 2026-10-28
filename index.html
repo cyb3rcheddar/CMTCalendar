@@ -171,12 +171,12 @@
 
     .orari-griglia {
       --altezza-intestazione: 42px;
-      --altezza-fascia: 76px;
+      --altezza-fascia: 38px;
       position: relative;
       display: grid;
       width: 100%;
       grid-template-columns: 58px repeat(5, minmax(0, 1fr));
-      grid-template-rows: var(--altezza-intestazione) repeat(12, minmax(var(--altezza-fascia), auto));
+      grid-template-rows: var(--altezza-intestazione) repeat(24, minmax(var(--altezza-fascia), auto));
     }
 
     .orari-giorno {
@@ -858,8 +858,8 @@
       let contenitore = document.getElementById("orariLezioni");
       let giorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì"];
       let inizioGiornata = 16 * 60 + 30;
-      let numeroSlot = 12;
-      let minutiPerSlot = 30;
+      let numeroSlot = 24;
+      let minutiPerSlot = 15;
       let corsiPerGiorno = {};
       let corsiInseriti = 0;
 
@@ -913,8 +913,10 @@
         let minuti = inizioGiornata + indiceSlot * minutiPerSlot;
         let ora = String(Math.floor(minuti / 60)).padStart(2, "0");
         let minuto = String(minuti % 60).padStart(2, "0");
-        html += "<div class='orari-etichetta-ora' data-line-slot='" + indiceSlot + "'>" +
-          ora + ":" + minuto + "</div>";
+        if(indiceSlot % 2 === 0) {
+          html += "<div class='orari-etichetta-ora' data-line-slot='" + indiceSlot + "'>" +
+            ora + ":" + minuto + "</div>";
+        }
         giorni.forEach(function(giorno, indiceGiorno) {
           html += "<div class='orari-cella' aria-hidden='true' style='grid-column:" +
             (indiceGiorno + 2) + ";grid-row:" + (indiceSlot + 2) +
@@ -939,7 +941,9 @@
               escapeHTML(corso.materia || corso.id || "Corso") + "</div>";
             html += "<div>" + escapeHTML(corso.eta || "—") + "</div>";
             html += "<div>" + escapeHTML(corso.inizio + " - " + corso.fine) + "</div>";
-            html += "<div>Docente: " + escapeHTML(corso.docente || "—") + "</div>";
+            if(corso.docente && String(corso.docente).trim()){
+              html += "<div>Docente: " + escapeHTML(corso.docente) + "</div>";
+            }
             html += "</div>";
         });
       });
