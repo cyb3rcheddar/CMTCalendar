@@ -165,6 +165,91 @@
       font-weight: bold;
     }
 
+    .orari-scroll {
+      width: 100%;
+    }
+
+    .orari-griglia {
+      --altezza-intestazione: 42px;
+      --altezza-fascia: 76px;
+      position: relative;
+      display: grid;
+      width: 100%;
+      grid-template-columns: 58px repeat(5, minmax(0, 1fr));
+      grid-template-rows: var(--altezza-intestazione) repeat(12, minmax(var(--altezza-fascia), auto));
+    }
+
+    .orari-giorno {
+      min-width: 0;
+      padding: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 2px;
+      border-radius: 8px;
+      background: var(--border-color);
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .card .orari-giorno,
+    .card .orari-corso {
+      overflow-wrap: break-word;
+    }
+
+    .orari-cella {
+      min-width: 0;
+      margin: 2px;
+      border: 1px solid var(--border-color);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .orari-etichetta-ora {
+      position: absolute;
+      left: 0;
+      z-index: 3;
+      width: 54px;
+      padding-right: 5px;
+      transform: translateY(-50%);
+      background: var(--card-bg);
+      color: var(--primary-dark);
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .orari-corso {
+      z-index: 2;
+      min-width: 0;
+      margin: 3px;
+      padding: 7px;
+      border-left: 4px solid var(--primary-color);
+      border-radius: 6px;
+      background: #e8f5ec;
+      color: var(--primary-dark);
+      font-size: 11px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .orari-corso-materia {
+      margin-bottom: 3px;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .orari-vuoto {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
     /* Badge per lo stato BOZZA (visibile solo a staff) */
     .badge-bozza {
       background: #ffe3e8 !important;
@@ -339,6 +424,31 @@
         font-size: 15px;
       }
 
+      .orari-griglia {
+        grid-template-columns: 42px repeat(5, minmax(0, 1fr));
+      }
+
+      .orari-etichetta-ora {
+        width: 40px;
+        padding-right: 3px;
+        font-size: 9px;
+      }
+
+      .orari-giorno {
+        padding: 2px;
+        font-size: 10px;
+      }
+
+      .orari-corso {
+        margin: 2px;
+        padding: 4px 3px;
+        font-size: 9px;
+      }
+
+      .orari-corso-materia {
+        font-size: 10px;
+      }
+
       .giorno-calendario {
         margin: 20px 0 26px;
       }
@@ -469,6 +579,12 @@
     <!-- Box presa visione: visibile solo con una nuova versione o dopo la conferma nella sessione -->
     <div id="aggiornamenti" class="card nascosto"></div>
 
+    <!-- Orari settimanali dei corsi associati all'utente -->
+    <div class="card">
+      <h3>🕒 Orari delle lezioni</h3>
+      <div id="orariLezioni"></div>
+    </div>
+
     <!-- Calendario Prove e Turni -->
     <div class="card">
       <h3>📅 Calendario Prove</h3>
@@ -564,6 +680,7 @@
 
       // Popola sezioni dinamiche
       mostraAggiornamenti(dati);
+      mostraOrariLezioni(dati.orariLezioni);
       mostraCalendario(dati.prove);
       pianificaAggiornamentoCalendarioGiornaliero();
     }
@@ -669,6 +786,180 @@
         });
         box.innerHTML = html;
       }
+    }
+
+    function escapeHTML(valore) {
+      return String(valore == null ? "" : valore)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function minutiDaOrario(orario) {
+      let corrispondenza = String(orario || "").match(/^(\d{1,2})[:.](\d{2})$/);
+      return corrispondenza
+        ? Number(corrispondenza[1]) * 60 + Number(corrispondenza[2])
+        : null;
+    }
+
+    function luminanzaRelativa(colore) {
+      let componenti = colore.match(/[0-9a-f]{2}/gi).map(function(hex) {
+        let valore = parseInt(hex, 16) / 255;
+        return valore <= 0.04045 ? valore / 12.92 : Math.pow((valore + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * componenti[0] + 0.7152 * componenti[1] + 0.0722 * componenti[2];
+    }
+
+    function tintaCorsoConContrasto(coloreSfondo, contrastoMinimo) {
+      let componentiSfondo = coloreSfondo.match(/[0-9a-f]{2}/gi).map(function(hex) {
+        return parseInt(hex, 16);
+      });
+      let luminanzaSfondo = luminanzaRelativa(coloreSfondo);
+      let bianco = "#ffffff";
+      let nero = "#000000";
+      let contrastoBianco = 1.05 / (luminanzaSfondo + 0.05);
+      let contrastoNero = (luminanzaSfondo + 0.05) / 0.05;
+      let coloreEstremo = contrastoBianco > contrastoNero ? bianco : nero;
+      let componentiEstremo = coloreEstremo.match(/[0-9a-f]{2}/gi).map(function(hex) {
+        return parseInt(hex, 16);
+      });
+
+      for(let percentuale = 0.05; percentuale <= 1; percentuale += 0.05) {
+        let tinta = "#" + componentiSfondo.map(function(valore, indice) {
+          let mescolato = Math.round(
+            valore + (componentiEstremo[indice] - valore) * percentuale
+          );
+          return mescolato.toString(16).padStart(2, "0");
+        }).join("");
+        let luminanzaTinta = luminanzaRelativa(tinta);
+        let contrasto = (Math.max(luminanzaSfondo, luminanzaTinta) + 0.05) /
+          (Math.min(luminanzaSfondo, luminanzaTinta) + 0.05);
+        if(contrasto >= contrastoMinimo) return tinta;
+      }
+      return coloreEstremo;
+    }
+
+    function stileColoreCorso(colore) {
+      let coloreSfondo = /^#[0-9a-f]{6}$/i.test(String(colore || ""))
+        ? colore
+        : "#e8f5ec";
+      let luminanzaSfondo = luminanzaRelativa(coloreSfondo);
+      let contrastoBianco = 1.05 / (luminanzaSfondo + 0.05);
+      let coloreTesto = contrastoBianco >= 4.5 ? "#ffffff" : "#000000";
+      let coloreBarra = tintaCorsoConContrasto(coloreSfondo, 3);
+      return "background-color:" + coloreSfondo +
+        ";color:" + coloreTesto +
+        ";border-left-color:" + coloreBarra + ";";
+    }
+
+    function mostraOrariLezioni(corsi) {
+      let contenitore = document.getElementById("orariLezioni");
+      let giorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì"];
+      let inizioGiornata = 16 * 60 + 30;
+      let numeroSlot = 12;
+      let minutiPerSlot = 30;
+      let corsiPerGiorno = {};
+      let corsiInseriti = 0;
+
+      (corsi || []).forEach(function(corso) {
+        let giornoCorso = giorni.find(function(giorno) {
+          return String(corso.giorno || "").toLocaleLowerCase("it-IT") ===
+            giorno.toLocaleLowerCase("it-IT");
+        });
+        let inizio = corso.minutiInizio !== null && corso.minutiInizio !== undefined &&
+          corso.minutiInizio !== "" && Number.isFinite(Number(corso.minutiInizio))
+          ? Number(corso.minutiInizio)
+          : minutiDaOrario(corso.inizio);
+        let fine = corso.minutiFine !== null && corso.minutiFine !== undefined &&
+          corso.minutiFine !== "" && Number.isFinite(Number(corso.minutiFine))
+          ? Number(corso.minutiFine)
+          : minutiDaOrario(corso.fine);
+
+        if(!giornoCorso || inizio === null || fine === null ||
+          fine <= inizio || fine <= inizioGiornata || inizio >= inizioGiornata + numeroSlot * minutiPerSlot) {
+          return;
+        }
+
+        let indiceSlot = Math.max(0, Math.floor((inizio - inizioGiornata) / minutiPerSlot));
+        let inizioSlot = inizioGiornata + indiceSlot * minutiPerSlot;
+        let durataSlot = Math.min(
+          numeroSlot - indiceSlot,
+          Math.max(1, Math.ceil((Math.min(fine, inizioGiornata + numeroSlot * minutiPerSlot) -
+            inizioSlot) / minutiPerSlot))
+        );
+        if(!corsiPerGiorno[giornoCorso]) corsiPerGiorno[giornoCorso] = [];
+        corsiPerGiorno[giornoCorso].push({
+          corso: corso,
+          indiceSlot: indiceSlot,
+          durataSlot: durataSlot
+        });
+        corsiInseriti++;
+      });
+
+      if(corsiInseriti === 0) {
+        contenitore.innerHTML = "<p class='orari-vuoto'>Nessun orario disponibile per i corsi associati.</p>";
+        return;
+      }
+
+      let html = "<div class='orari-scroll'><div class='orari-griglia'>";
+      giorni.forEach(function(giorno, indiceGiorno) {
+        html += "<div class='orari-giorno' style='grid-column:" +
+          (indiceGiorno + 2) + ";grid-row:1'>" + giorno + "</div>";
+      });
+
+      for(let indiceSlot = 0; indiceSlot < numeroSlot; indiceSlot++) {
+        let minuti = inizioGiornata + indiceSlot * minutiPerSlot;
+        let ora = String(Math.floor(minuti / 60)).padStart(2, "0");
+        let minuto = String(minuti % 60).padStart(2, "0");
+        html += "<div class='orari-etichetta-ora' data-line-slot='" + indiceSlot + "'>" +
+          ora + ":" + minuto + "</div>";
+        giorni.forEach(function(giorno, indiceGiorno) {
+          html += "<div class='orari-cella' aria-hidden='true' style='grid-column:" +
+            (indiceGiorno + 2) + ";grid-row:" + (indiceSlot + 2) +
+            "' data-slot='" + indiceSlot + "'></div>";
+        });
+      }
+
+      let oraFine = String(Math.floor((inizioGiornata + numeroSlot * minutiPerSlot) / 60)).padStart(2, "0");
+      let minutoFine = String((inizioGiornata + numeroSlot * minutiPerSlot) % 60).padStart(2, "0");
+      html += "<div class='orari-etichetta-ora' data-line-slot='" + numeroSlot +
+        "'>" + oraFine + ":" + minutoFine + "</div>";
+
+      giorni.forEach(function(giorno, indiceGiorno) {
+        (corsiPerGiorno[giorno] || []).forEach(function(elementoCorso) {
+          let corso = elementoCorso.corso;
+          let rigaInizio = elementoCorso.indiceSlot + 2;
+          let rigaFine = rigaInizio + elementoCorso.durataSlot;
+          html += "<div class='orari-corso' style='" + stileColoreCorso(corso.colore) +
+            "grid-column:" + (indiceGiorno + 2) + ";grid-row:" + rigaInizio +
+            " / " + rigaFine + "'>";
+            html += "<div class='orari-corso-materia'>" +
+              escapeHTML(corso.materia || corso.id || "Corso") + "</div>";
+            html += "<div>" + escapeHTML(corso.eta || "—") + "</div>";
+            html += "<div>" + escapeHTML(corso.inizio + " - " + corso.fine) + "</div>";
+            html += "<div>Docente: " + escapeHTML(corso.docente || "—") + "</div>";
+            html += "</div>";
+        });
+      });
+
+      html += "</div></div>";
+      contenitore.innerHTML = html;
+
+      let griglia = contenitore.querySelector(".orari-griglia");
+      Array.from(griglia.querySelectorAll(".orari-etichetta-ora")).forEach(function(etichetta) {
+        let indiceLinea = Number(etichetta.getAttribute("data-line-slot"));
+        let cellaRiferimento = griglia.querySelector(
+          ".orari-cella[data-slot='" + Math.min(indiceLinea, numeroSlot - 1) + "']"
+        );
+        if(!cellaRiferimento) return;
+
+        let posizione = indiceLinea === numeroSlot
+          ? cellaRiferimento.offsetTop + cellaRiferimento.offsetHeight + 2
+          : cellaRiferimento.offsetTop - 2;
+        etichetta.style.top = posizione + "px";
+      });
     }
 
     /**

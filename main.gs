@@ -72,19 +72,40 @@ function getDati(nome){
     return cacheDati[nome];
   }
 
-  const sh =
-  getFoglio(nome);
+  const sh = getFoglio(nome);
 
   if(!sh){
     cacheDati[nome] = [];
     return [];
   }
 
-  cacheDati[nome] = sh
-  .getDataRange()
-  .getValues();
+  cacheDati[nome] = sh.getDataRange().getValues();
 
   return cacheDati[nome];
+}
+
+function getFoglioCorsi(){
+  const chiaveCache = "CORSI";
+  return SpreadsheetApp
+    .getActive()
+    .getSheets()
+    .find(function(foglio){
+      return String(foglio.getName()).trim().toUpperCase() === chiaveCache;
+    }) || null;
+}
+
+function getDatiCorsi(){
+  const chiaveCache = "CORSI";
+  if(Object.prototype.hasOwnProperty.call(cacheDati, chiaveCache)){
+    return cacheDati[chiaveCache];
+  }
+
+  const foglioCorsi = getFoglioCorsi();
+
+  cacheDati[chiaveCache] = foglioCorsi
+    ? foglioCorsi.getDataRange().getDisplayValues()
+    : [];
+  return cacheDati[chiaveCache];
 }
 
 /**
@@ -470,7 +491,7 @@ function getMappaNomiCorsi(){
   if(cacheNomiCorsi !== null) return cacheNomiCorsi;
 
   cacheNomiCorsi = {};
-  const dati = getDati("CORSI");
+  const dati = getDatiCorsi();
   if(dati.length < 2) return cacheNomiCorsi;
 
   const h = dati[0];
@@ -484,6 +505,192 @@ function getMappaNomiCorsi(){
     if(idCorso) cacheNomiCorsi[idCorso] = dati[i][cNome];
   }
   return cacheNomiCorsi;
+}
+
+function trovaColonnaFlessibile(header, alternative){
+  const intestazioni = header.map(function(valore){
+    return normalizzaCorso(valore);
+  });
+
+  for(let i = 0; i < alternative.length; i++){
+    const nome = normalizzaCorso(alternative[i]);
+    const indiceEsatto = intestazioni.indexOf(nome);
+    if(indiceEsatto !== -1) return indiceEsatto;
+  }
+
+  for(let i = 0; i < alternative.length; i++){
+    const nome = normalizzaCorso(alternative[i]);
+    const indiceParziale = intestazioni.findIndex(function(intestazione){
+      return nome.length > 3 && intestazione.indexOf(nome) !== -1;
+    });
+    if(indiceParziale !== -1) return indiceParziale;
+  }
+  return -1;
+}
+
+function parseOrariLezioni(testoOrari, giornoAlternativo){
+  const giorni = [
+    {nome: "Lunedì", pattern: "lunedi"},
+    {nome: "Martedì", pattern: "martedi"},
+    {nome: "Mercoledì", pattern: "mercoledi"},
+    {nome: "Giovedì", pattern: "giovedi"},
+    {nome: "Venerdì", pattern: "venerdi"},
+    {nome: "Sabato", pattern: "sabato"},
+    {nome: "Domenica", pattern: "domenica"}
+  ];
+  const occasioni = [];
+  const parti = String(testoOrari || "").split(/[\r\n;|]+/);
+
+  parti.forEach(function(parte){
+    const testo = String(parte || "").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    const regexGiorno = /\b(lunedi|lun|martedi|mar|mercoledi|mer|giovedi|gio|venerdi|ven|sabato|sab|domenica|dom)\b/gi;
+    const giorniTrovati = [];
+    let corrispondenzaGiorno;
+    while((corrispondenzaGiorno = regexGiorno.exec(testo)) !== null){
+      const giornoNormalizzato = normalizzaCorso(corrispondenzaGiorno[1]);
+      const giorno = giorni.find(function(candidato){
+        return candidato.pattern.toUpperCase().indexOf(giornoNormalizzato) === 0;
+      });
+      if(giorno && giorniTrovati.indexOf(giorno) === -1){
+        giorniTrovati.push(giorno);
+      }
+    }
+    if(giorniTrovati.length === 0 && giornoAlternativo){
+      const giornoNormalizzato = normalizzaCorso(giornoAlternativo);
+      const giorno = giorni.find(function(candidato){
+        const pattern = candidato.pattern.toUpperCase();
+        return pattern.indexOf(giornoNormalizzato) === 0 ||
+          giornoNormalizzato.indexOf(pattern) === 0;
+      });
+      if(giorno) giorniTrovati.push(giorno);
+    }
+
+    const intervalli = [];
+    const regexOrario = /(\d{1,2})\s*[:.]\s*(\d{2})\s*(?:-|–|—|\/|\b(?:a|alle)\b|\bfino\s+alle\b)\s*(\d{1,2})\s*[:.]\s*(\d{2})/gi;
+    let corrispondenza;
+    while((corrispondenza = regexOrario.exec(parte)) !== null){
+      const inizioOra = Number(corrispondenza[1]);
+      const inizioMinuti = Number(corrispondenza[2]);
+      const fineOra = Number(corrispondenza[3]);
+      const fineMinuti = Number(corrispondenza[4]);
+      const inizio = inizioOra * 60 + inizioMinuti;
+      const fine = fineOra * 60 + fineMinuti;
+      if(inizioOra < 24 && fineOra < 24 && inizioMinuti < 60 &&
+        fineMinuti < 60 && fine > inizio){
+        intervalli.push({
+          inizio: String(inizioOra).padStart(2, "0") + ":" + String(inizioMinuti).padStart(2, "0"),
+          fine: String(fineOra).padStart(2, "0") + ":" + String(fineMinuti).padStart(2, "0"),
+          minutiInizio: inizio,
+          minutiFine: fine
+        });
+      }
+    }
+
+    giorniTrovati.forEach(function(giorno){
+      intervalli.forEach(function(intervallo){
+        occasioni.push({
+          giorno: giorno.nome,
+          inizio: intervallo.inizio,
+          fine: intervallo.fine,
+          minutiInizio: intervallo.minutiInizio,
+          minutiFine: intervallo.minutiFine
+        });
+      });
+    });
+  });
+
+  return occasioni;
+}
+
+function getOrariLezioni(corsi){
+  const foglioCorsi = getFoglioCorsi();
+  if(!foglioCorsi || foglioCorsi.getLastRow() < 2) return [];
+
+  const datiCompleti = foglioCorsi
+    .getRange(1, 1, foglioCorsi.getLastRow(), 9)
+    .getDisplayValues();
+  const headerCompleto = datiCompleti[0];
+  const dati = foglioCorsi
+    .getRange(1, 4, foglioCorsi.getLastRow(), 6)
+    .getDisplayValues();
+  const h = dati[0];
+  const cID = trovaColonnaFlessibile(headerCompleto, [
+    "ID CORSI", "ID CORSO", "CODICE CORSO", "ID"
+  ]);
+  const cMateriaHeader = trovaColonnaFlessibile(h, [
+    "MATERIA", "NOME CORSO E CARTELLA DRIVE", "NOME CORSO", "CORSO"
+  ]);
+  const cEtaHeader = trovaColonnaFlessibile(h, [
+    "ETA", "FASCIA ETA", "FASCIA D ETA", "FASCIA DI ETA", "ETA ALLIEVI", "ANNI"
+  ]);
+  const cDocenteHeader = trovaColonnaFlessibile(h, [
+    "DOCENTE", "DOCENTI", "INSEGNANTE", "NOME DOCENTE"
+  ]);
+  const cOrariHeader = trovaColonnaFlessibile(h, ["ORARI", "ORARIO"]);
+  const cGiorno = trovaColonnaFlessibile(h, ["GIORNO", "GIORNI"]);
+  const cMateria = cMateriaHeader !== -1 ? cMateriaHeader : 0;
+  const cEta = cEtaHeader !== -1 ? cEtaHeader : 1;
+  const cDocente = cDocenteHeader !== -1 ? cDocenteHeader : 2;
+  const cOrari = cOrariHeader !== -1 ? cOrariHeader : 5;
+  const coloriCorsi = foglioCorsi
+    .getRange(2, 4 + cMateria, dati.length - 1, 1)
+    .getBackgrounds();
+
+  const corsiConsentiti = Object.create(null);
+  (corsi || []).forEach(function(corso){
+    const id = normalizzaCorso(corso);
+    const nome = normalizzaCorso(nomeCorso(corso));
+    if(id) corsiConsentiti[id] = true;
+    if(nome) corsiConsentiti[nome] = true;
+  });
+  let risultati = [];
+
+  for(let i = 1; i < dati.length; i++){
+    const rigaCorso = dati[i];
+    const materia = String(rigaCorso[cMateria] || "").trim();
+    const idCorso = cID === -1 ? "" : String(datiCompleti[i][cID] || "").trim();
+    const idNormalizzato = normalizzaCorso(idCorso);
+    const materiaNormalizzata = normalizzaCorso(materia);
+    const nomeDaID = normalizzaCorso(idCorso ? nomeCorso(idCorso) : "");
+    const isCompagnia = materiaNormalizzata === "COMPAGNIA";
+    const corrisponde = isCompagnia
+      ? Boolean(corsiConsentiti["COMPAGNIA2627"])
+      : Boolean(
+        corsiConsentiti[idNormalizzato] ||
+        corsiConsentiti[materiaNormalizzata] ||
+        corsiConsentiti[nomeDaID]
+      );
+    if(!corrisponde) continue;
+
+    const testoOrari = rigaCorso[cOrari];
+    const giornoAlternativo = isCompagnia
+      ? "Mercoledì"
+      : cGiorno === -1 ? "" : rigaCorso[cGiorno];
+    const occasioni = parseOrariLezioni(testoOrari, giornoAlternativo);
+    if(isCompagnia){
+      occasioni.forEach(function(occasione){
+        occasione.giorno = "Mercoledì";
+      });
+    }
+    occasioni.forEach(function(occasione){
+      risultati.push({
+        id: idCorso || materia,
+        materia: materia || "Corso",
+        eta: String(rigaCorso[cEta] || "").trim(),
+        docente: String(rigaCorso[cDocente] || "").trim(),
+        giorno: occasione.giorno,
+        inizio: occasione.inizio,
+        fine: occasione.fine,
+        minutiInizio: occasione.minutiInizio,
+        minutiFine: occasione.minutiFine,
+        colore: coloriCorsi.length > 0 ? coloriCorsi[i - 1][0] : ""
+      });
+    });
+  }
+
+  return risultati;
 }
 
 function normalizzaCorso(valore){
@@ -860,6 +1067,7 @@ function caricaPortale(email){
   return {
     utente: utente,  // Profilo utente con permessi
     corsiVisualizzati: creaCorsiVisualizzati(corsi),  // Nomi leggibili corsi
+    orariLezioni: getOrariLezioni(corsi),
     prove: calendario,  // Turni filtrati
     versione: getVersione(),  // Versione attuale calendar
     versioneVista: getVersioneVista(email),  // Versione che ha visto l'utente
