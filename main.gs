@@ -359,14 +359,18 @@ function cercaGruppoEUtenti(email){
   let nicknameFamiglia = "";
 
   // STEP 1: Trova il gruppo della famiglia da email
-  for(let i=1; i<datiGruppi.length; i++){
-    if(
-      String(datiGruppi[i][cGEmail]).trim().toLowerCase() == email 
-      && valoreSI(datiGruppi[i][cGAttivo])  // Account genitore deve essere attivo
-    ){
-      idGruppoTrovato = String(datiGruppi[i][cGID]).trim();
-      nicknameFamiglia = String(datiGruppi[i][cGName]).trim();
-      break;
+  if(cGEmail !== -1 && cGID !== -1){
+    for(let i=1; i<datiGruppi.length; i++){
+      let idGruppo = String(datiGruppi[i][cGID] || "").trim();
+      if(
+        String(datiGruppi[i][cGEmail]).trim().toLowerCase() == email
+        && idGruppo
+        && valoreSI(datiGruppi[i][cGAttivo])  // Account genitore deve essere attivo
+      ){
+        idGruppoTrovato = idGruppo;
+        nicknameFamiglia = cGName === -1 ? "" : String(datiGruppi[i][cGName]).trim();
+        break;
+      }
     }
   }
 
@@ -423,6 +427,7 @@ function cercaGruppoEUtenti(email){
       ? persone[0].nome + " " + persone[0].cognome
       : (nicknameFamiglia ? nicknameFamiglia : "Gruppo " + idGruppoTrovato),
     idGruppo: idGruppoTrovato,
+    famigliaVerificata: !accountIndividuale && Boolean(idGruppoTrovato),
     corsi: tuttiCorsiID,  // Elenco unico di corsi per la famiglia
     corsiVisualizzati: creaCorsiVisualizzati(tuttiCorsiID),
     membri: persone  // Lista allievi (con loro corsi singoli)

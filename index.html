@@ -196,7 +196,7 @@
       border-radius: 8px;
       background: var(--border-color);
       color: var(--primary-dark);
-      font-size: 13px;
+      font-size: clamp(11px, 1.1vw, 15px);
       font-weight: bold;
       overflow-wrap: anywhere;
       text-align: center;
@@ -221,7 +221,7 @@
       transform: translateY(-50%);
       background: var(--card-bg);
       color: var(--primary-dark);
-      font-size: 11px;
+      font-size: clamp(11px, 1vw, 14px);
       font-weight: bold;
       line-height: 1;
       text-align: right;
@@ -232,19 +232,19 @@
       z-index: 2;
       min-width: 0;
       margin: 3px;
-      padding: 7px;
+      padding: 5px;
       border-left: 4px solid var(--primary-color);
       border-radius: 6px;
       background: #e8f5ec;
       color: var(--primary-dark);
-      font-size: 11px;
-      line-height: 1.35;
+      font-size: clamp(13px, 1.4vw, 16px);
+      line-height: 1.25;
       overflow-wrap: anywhere;
     }
 
     .orari-corso-materia {
       margin-bottom: 3px;
-      font-size: 12px;
+      font-size: clamp(14px, 1.6vw, 18px);
       font-weight: bold;
       text-align: center;
     }
@@ -273,13 +273,6 @@
       background: var(--border-color);
       border-radius: 10px;
       font-size: 16px;
-    }
-
-    .giorno-assegnatari {
-      display: block;
-      margin-top: 4px;
-      font-size: 12px;
-      font-weight: normal;
     }
 
     .prova {
@@ -442,22 +435,23 @@
       .orari-etichetta-ora {
         width: 40px;
         padding-right: 3px;
-        font-size: 9px;
+        font-size: 10px;
       }
 
       .orari-giorno {
         padding: 2px;
-        font-size: 10px;
+        font-size: 11px;
       }
 
       .orari-corso {
         margin: 2px;
-        padding: 4px 3px;
-        font-size: 9px;
+        padding: 4px 2px;
+        border-left-width: 3px;
+        font-size: 13px;
       }
 
       .orari-corso-materia {
-        font-size: 10px;
+        font-size: 14px;
       }
 
       .giorno-calendario {
@@ -1178,38 +1172,16 @@
             return minutiA - minutiB;
           });
 
-          let nomiAssegnatariGiorno = new Set();
-          if (datiPortale.utente.tipo === "famiglia" &&
-              !datiPortale.utente.anteprimaAttiva &&
-              datiPortale.utente.membri) {
-            eventi.forEach(function(evento) {
-              datiPortale.utente.membri.forEach(function(membro) {
-                let partecipa = membro.corsi.some(function(corsoCodice) {
-                  return evento.destinatari.includes(corsoCodice);
-                });
-
-                if (partecipa) {
-                  let nomeCompleto = [membro.nome, membro.cognome]
-                    .filter(function(nome) { return String(nome || "").trim(); })
-                    .join(" ");
-                  if (nomeCompleto) nomiAssegnatariGiorno.add(nomeCompleto);
-                }
-              });
-            });
-          }
-
           html += "<section class='giorno-calendario'>" +
-            "<h4 class='giorno-intestazione'>📅 " + formattaIntestazioneGiorno(giorno) +
-            (nomiAssegnatariGiorno.size > 0
-              ? "<small class='giorno-assegnatari'>" + Array.from(nomiAssegnatariGiorno).join(", ") + "</small>"
-              : "") +
-            "</h4>";
+            "<h4 class='giorno-intestazione'>📅 " + formattaIntestazioneGiorno(giorno) + "</h4>";
 
           eventi.forEach(function(p) {
             let chiDeveAndare = [];  // Figli della famiglia che partecipano
 
             // Per famiglie: identifica quali figli partecipano al turno
-            if (datiPortale.utente.tipo === "famiglia" && datiPortale.utente.membri) {
+            if (datiPortale.utente.tipo === "famiglia" &&
+                datiPortale.utente.famigliaVerificata === true &&
+                datiPortale.utente.membri) {
               datiPortale.utente.membri.forEach(function(membro) {
                 // Controlla se almeno uno dei corsi del figlio è nel turno
                 let partecipa = membro.corsi.some(function(corsoCodice) {
