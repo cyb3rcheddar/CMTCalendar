@@ -202,10 +202,7 @@
 
     .orari-cella {
       min-width: 0;
-      margin: 2px;
-      border: 1px solid var(--border-color);
-      border-radius: 7px;
-      background: #fff;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .orari-etichetta-ora {
@@ -844,10 +841,26 @@
     function stileColoreCorso(colore) {
       let coloreSfondo = /^#[0-9a-f]{6}$/i.test(String(colore || ""))
         ? colore
-        : "#e8f5ec";
+        : "#2d6a4f";
       let luminanzaSfondo = luminanzaRelativa(coloreSfondo);
       let contrastoBianco = 1.05 / (luminanzaSfondo + 0.05);
-      let coloreTesto = contrastoBianco >= 4.5 ? "#ffffff" : "#000000";
+      let coloreTesto = "#ffffff";
+      if(luminanzaSfondo > 0.95) {
+        coloreTesto = "#000000";
+      } else if(contrastoBianco < 4.5) {
+        let componentiSfondo = coloreSfondo.match(/[0-9a-f]{2}/gi).map(function(hex) {
+          return parseInt(hex, 16);
+        });
+        for(let percentuale = 0.05; percentuale <= 1; percentuale += 0.05) {
+          let sfondoScuro = "#" + componentiSfondo.map(function(valore) {
+            return Math.round(valore * (1 - percentuale)).toString(16).padStart(2, "0");
+          }).join("");
+          if(1.05 / (luminanzaRelativa(sfondoScuro) + 0.05) >= 4.5) {
+            coloreSfondo = sfondoScuro;
+            break;
+          }
+        }
+      }
       let coloreBarra = tintaCorsoConContrasto(coloreSfondo, 3);
       return "background-color:" + coloreSfondo +
         ";color:" + coloreTesto +
