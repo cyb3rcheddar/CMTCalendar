@@ -275,6 +275,13 @@
       font-size: 16px;
     }
 
+    .giorno-assegnatari {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: normal;
+    }
+
     .prova {
       border-left: 6px solid var(--primary-color);
       padding: 15px;
@@ -1168,8 +1175,32 @@
             return minutiA - minutiB;
           });
 
+          let nomiAssegnatariGiorno = new Set();
+          if (datiPortale.utente.tipo === "famiglia" &&
+              !datiPortale.utente.anteprimaAttiva &&
+              datiPortale.utente.membri) {
+            eventi.forEach(function(evento) {
+              datiPortale.utente.membri.forEach(function(membro) {
+                let partecipa = membro.corsi.some(function(corsoCodice) {
+                  return evento.destinatari.includes(corsoCodice);
+                });
+
+                if (partecipa) {
+                  let nomeCompleto = [membro.nome, membro.cognome]
+                    .filter(function(nome) { return String(nome || "").trim(); })
+                    .join(" ");
+                  if (nomeCompleto) nomiAssegnatariGiorno.add(nomeCompleto);
+                }
+              });
+            });
+          }
+
           html += "<section class='giorno-calendario'>" +
-            "<h4 class='giorno-intestazione'>📅 " + formattaIntestazioneGiorno(giorno) + "</h4>";
+            "<h4 class='giorno-intestazione'>📅 " + formattaIntestazioneGiorno(giorno) +
+            (nomiAssegnatariGiorno.size > 0
+              ? "<small class='giorno-assegnatari'>" + Array.from(nomiAssegnatariGiorno).join(", ") + "</small>"
+              : "") +
+            "</h4>";
 
           eventi.forEach(function(p) {
             let chiDeveAndare = [];  // Figli della famiglia che partecipano
