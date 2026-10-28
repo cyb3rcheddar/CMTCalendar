@@ -809,16 +809,16 @@
       let html = "";
       let oggi = new Date();
       let chiaveOggi = oggi.getFullYear() * 10000 + (oggi.getMonth() + 1) * 100 + oggi.getDate();
-      let proveFuture = (prove || []).filter(function(prova) {
+      let proveVisibili = (prove || []).filter(function(prova) {
         let chiaveData = chiaveDataCalendario(prova.data);
-        return chiaveData !== null && chiaveData > chiaveOggi;
+        return chiaveData !== null && chiaveData >= chiaveOggi;
       });
 
-      if (proveFuture.length === 0) {
-        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessuna attività futura pianificata a calendario.</p>";
+      if (proveVisibili.length === 0) {
+        html = "<p style='color:var(--text-muted); font-size: 14px;'>Nessuna attività pianificata a calendario.</p>";
       } else {
         let gruppiPerGiorno = new Map();
-        proveFuture.forEach(function(prova) {
+        proveVisibili.forEach(function(prova) {
           let giorno = String(prova.data || "").trim();
           if (!gruppiPerGiorno.has(giorno)) {
             gruppiPerGiorno.set(giorno, []);
